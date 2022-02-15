@@ -35,6 +35,7 @@ def normal_full_layer(input_layer, size):
     b = init_bias([size])
     return tf.matmul(input_layer, W) + b
 
+#build
 
 def prepare_model(learning_rate):
     x = tf.compat.v1.placeholder(tf.float32, shape=[None, 784])

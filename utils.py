@@ -17,6 +17,7 @@ def read_mnist_images(file_name):
         while len(data) == 784:
             image_list.append(np.frombuffer(data, dtype=np.uint8))
             data = file.read(784)
+    #todo write TF records to the disk
     return np.array(image_list)
 
 
