@@ -33,13 +33,14 @@ def normal_full_layer(input_layer, size):
     input_size = int(input_layer.get_shape()[1])
     W = init_weights([input_size, size])
     b = init_bias([size])
-    return tf.matmul(input_layer, W) + b
+    return tf.add(tf.matmul(input_layer, W), b, name="y_pred")
 
+
+# build
 
 def prepare_model(learning_rate):
-    x = tf.compat.v1.placeholder(tf.float32, shape=[None, 784])
-    y_true = tf.compat.v1.placeholder(tf.float32, shape=[None, 10])
-
+    x = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="x")
+    y_true = tf.compat.v1.placeholder(tf.float32, shape=[None, 10], name="y_true")
     x_image = tf.reshape(x, [-1, 28, 28, 1])
 
     convo_1 = convolutional_layer(x_image, shape=[6, 6, 1, 32])
@@ -50,7 +51,7 @@ def prepare_model(learning_rate):
     convo_2_flat = tf.reshape(convo_2_pooling, [-1, 7 * 7 * 64])
 
     full_layer_one = tf.nn.relu(normal_full_layer(convo_2_flat, 1024))
-    hold_prob = tf.compat.v1.placeholder(tf.float32)
+    hold_prob = tf.compat.v1.placeholder(tf.float32, name="hold_prob")
 
     full_one_dropout = tf.nn.dropout(full_layer_one, rate=1 - hold_prob)
     y_pred = normal_full_layer(full_one_dropout, 10)
@@ -58,7 +59,7 @@ def prepare_model(learning_rate):
     cross_entropy = tf.reduce_mean(
         input_tensor=tf.nn.softmax_cross_entropy_with_logits(labels=tf.stop_gradient(y_true), logits=y_pred))
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
-    train = optimizer.minimize(cross_entropy)
+    train = optimizer.minimize(cross_entropy, name="train")
 
     return train, x, y_pred, y_true, hold_prob
 
