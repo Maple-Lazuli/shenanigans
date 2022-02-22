@@ -175,7 +175,7 @@ def create_tfrecords(data_dir,
                 writer.write(tf_example.SerializeToString())
 
 
-def main(flags):
+def main_cli(flags):
     split_dict = {"train": 0.8, "valid": 0.1, "test": 0.1}
 
     partition_fn = partition_examples
@@ -206,4 +206,4 @@ if __name__ == '__main__':
 
     flags, unparsed = parser.parse_known_args()
 
-    main(flags)
+    main_cli(flags)
