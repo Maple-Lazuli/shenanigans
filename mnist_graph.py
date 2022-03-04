@@ -11,15 +11,87 @@ def parse_records(record_batch):
         'height': tf.io.FixedLenFeature([], tf.int64),
         'width': tf.io.FixedLenFeature([], tf.int64),
         'depth': tf.io.FixedLenFeature([], tf.int64),
-        'label': tf.io.FixedLenFeature([], tf.string),
+        'label': tf.io.FixedLenFeature([], tf.int64),
         'image_raw': tf.io.FixedLenFeature([], tf.string)
     }
     example = tf.io.parse_example(record_batch, features)
     # the returns are in a format that will have to be reprocessed.
     # cannot figure out how to make them arrays instead of byte strings.
     # raw decode was giving strange errors.
+    # TODO: parse raw image like SatSim parser in miss_data_utils
     return example['image_raw'], example['label']
 
+
+def parse_satsim_record(example_proto):
+    """
+    This is the first step of the generator/augmentation chain. Reading the
+    raw file out of the TFRecord is fairly straight-forward, though does
+    require some simple fixes. For instance, the number of bounding boxes
+    needs to be padded to some upper bound so that the tensors are all of
+    the same shape and can thus be batched.
+    
+    :param example_proto: Example from a TFRecord file
+    :return: The raw image and padded bounding boxes corresponding to
+    this TFRecord example.
+    """
+    # Define how to parse the example
+    features = {
+        "width": tf.io.FixedLenFeature([], dtype=tf.int64),
+        "height": tf.io.FixedLenFeature([], dtype=tf.int64),
+        "images_raw": tf.io.VarLenFeature(dtype=tf.string),
+        "ymin": tf.io.VarLenFeature(tf.float32),
+        "ymax": tf.io.VarLenFeature(tf.float32),
+        "xmin": tf.io.VarLenFeature(tf.float32),
+        "xmax": tf.io.VarLenFeature(tf.float32),
+        "classes": tf.io.VarLenFeature(tf.int64),
+        "filename": tf.io.VarLenFeature(tf.string),
+    }
+    
+    # Parse the example
+    features_parsed = tf.io.parse_single_example(
+        serialized=example_proto, features=features
+    )
+    width = tf.cast(features_parsed["width"], tf.int32)
+    height = tf.cast(features_parsed["height"], tf.int32)
+    
+    filename = tf.cast(
+        tf.sparse.to_dense(features_parsed["filename"], default_value=""),
+        tf.string,
+    )
+    
+    # EDITED FOR TEST
+    ymin = tf.cast(tf.sparse.to_dense(features_parsed["ymin"]), tf.float32)
+    ymax = tf.cast(tf.sparse.to_dense(features_parsed["ymax"]), tf.float32)
+    xmin = tf.cast(tf.sparse.to_dense(features_parsed["xmin"]), tf.float32)
+    xmax = tf.cast(tf.sparse.to_dense(features_parsed["xmax"]), tf.float32)
+    classes = tf.cast(
+        tf.sparse.to_dense(features_parsed["classes"]), tf.float32
+    )
+    bboxes = tf.stack([ymin, xmin, ymax, xmax, classes], axis=1)
+    
+    #
+    
+    # Because images can differ in number of bounding boxes,
+    # we need to pad to the same size
+    # Before: bboxes is N X 5 where N is the number of boxes in that image
+    paddings = tf.constant([[0, self.max_boxes_per_image], [0, 0]])
+    paddings = paddings - (
+        tf.constant([[0, 1], [0, 0]]) * tf.shape(bboxes)[0]
+    )
+    bboxes = tf.pad(bboxes, paddings, constant_values=0.0)
+    
+    images = tf.sparse.to_dense(
+        features_parsed["images_raw"], default_value=""
+    )
+    images = tf.io.decode_raw(images, tf.uint16)
+    images = tf.reshape(images, [height, width, self.num_channels])
+    images = tf.cast(images, tf.float32)
+    
+    # # Normalize images
+    # images = self.get_normalization_func()(images)
+    
+    # Always return filename (let the user ignore it downstream)
+    return images, bboxes, filename
 
 def init_weights(shape):
     init_random_dist = tf.random.truncated_normal(shape, stddev=0.1)
@@ -74,6 +146,8 @@ class MNISTModel(object):
         with tf.name_scope("mnist_model"):
             self.minimize, self.X, self.y_pred, self.y_true, self.hold_prob = self._build_mnist_model()
 
+
+
     def train(self, epochs, save_location=None):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver()
@@ -83,10 +157,14 @@ class MNISTModel(object):
                 self.sess.run(self.train_iterator.initializer)
                 while True:
                     batch_x_pre, batch_y_pre = self.sess.run(self.next_train)
+                    # TODO: Refactor because of implicit coupling.
                     batch_y = np.vstack([np.frombuffer(e, dtype=np.uint8) for e in batch_y_pre])
                     batch_x = np.vstack([np.frombuffer(e, dtype=np.uint8) for e in batch_x_pre])
+
                     self.sess.run(self.minimize,
-                                  feed_dict={self.X: batch_x, self.y_true: batch_y, self.hold_prob: 0.5})
+                                  feed_dict={self.X: batch_x,
+                                             self.y_true: batch_y,
+                                             self.hold_prob: 0.5})
             except tf.errors.OutOfRangeError:
                 print(f"finished epoch {i}")
                 if i % 10 == 0:
@@ -149,8 +227,8 @@ class MNISTModel(object):
 
 
 def cli_main(flags):
-    train_records = "../mnist_tf/train/mnist_train.tfrecords"
-    test_records = "../mnist_tf/test/mnist_test.tfrecords"
+    train_records = "./mnist_tf/train/mnist_train.tfrecords"
+    test_records = "./mnist_tf/test/mnist_test.tfrecords"
 
     train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
     test_df = DatasetGenerator(test_records, parse_function=parse_records, shuffle=True, batch_size=3000)
