@@ -35,7 +35,6 @@ class DatasetGenerator(object):
         return self.dataset
 
     def get_iterator(self):
-
         return tf.compat.v1.data.make_initializable_iterator(self.dataset)
 
     def build_pipeline(self,

@@ -74,7 +74,7 @@ def parse_satsim_record(example_proto):
     # Because images can differ in number of bounding boxes,
     # we need to pad to the same size
     # Before: bboxes is N X 5 where N is the number of boxes in that image
-    paddings = tf.constant([[0, self.max_boxes_per_image], [0, 0]])
+    paddings = tf.constant([[0, max_boxes_per_image], [0, 0]])
     paddings = paddings - (
         tf.constant([[0, 1], [0, 0]]) * tf.shape(bboxes)[0]
     )
