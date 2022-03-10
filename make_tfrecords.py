@@ -44,6 +44,7 @@ def create_tfrecords(data_dir,
 def main_cli(flags):
     split_dict = {"train": 0.8, "valid": 0.1, "test": 0.1}
 
+    #TODO change to dataset name
     if flags.parser == "satsim":
         partition_fn = sim.partition_examples
         build_tf_dataset = sim.build_tf_dataset
