@@ -3,7 +3,7 @@ import tensorflow as tf
 import os
 import json
 import random
-
+import astropy.io.fits
 
 def get_labels(path):
     """
@@ -66,14 +66,15 @@ def build_tf_example(example):
     width = example['sensor']['width']
     field_of_view_x = example['sensor']['iFOVx']
     field_of_view_y = example['sensor']['iFOVy']
-    label = np.zeros(5)
+    label = np.zeros(5, dtype=np.int)
     label[example['class_number']] = 1
     stray_light = example['has_stray_light']
-
-    with open(example['fits_image_path'], 'rb') as fits_in:
-        image_raw = fits_in.read()  # TODO: fix this to not have a header anymore.
-
-    feature = {
+    try:
+        image_raw = astropy.io.fits.getdata(example['fits_image_path']).astype(np.uint16)
+    except:
+        print("error parsing fits")
+        return None
+    features = {
         "height": _int64_feature(height),
         "width": _int64_feature(width),
         "depth": _int64_feature(16),  # 16 bits per pixel for FITS images
@@ -81,10 +82,10 @@ def build_tf_example(example):
         "field_of_view_y": _floats_feature(field_of_view_y),
         "stray_light": _int64_feature(stray_light),
         "label": _bytes_feature(label.tobytes()),
-        "image_raw": _bytes_feature(image_raw)
+        "image_raw": _bytes_feature(image_raw.tobytes())
     }
 
-    return tf.train.Example(features=tf.train.Features(feature=feature))
+    return tf.train.Example(features=tf.train.Features(feature=features))
 
 
 def build_tf_dataset(directory):

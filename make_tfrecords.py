@@ -5,7 +5,6 @@ import make_tfrecords_mnist as mnist
 import os
 import shutil
 
-
 def make_clean_dir(directory):
     if os.path.exists(directory):
         shutil.rmtree(directory)
@@ -38,7 +37,8 @@ def create_tfrecords(data_dir,
         with tf.io.TFRecordWriter(output_path) as writer:
             for example in split_examples:
                 tf_example = tf_example_builder_fn(example)
-                writer.write(tf_example.SerializeToString())
+                # only write if the tf_example_builder_fn does not return a none value
+                writer.write(tf_example.SerializeToString()) if tf_example is not None else None
 
 
 def main_cli(flags):

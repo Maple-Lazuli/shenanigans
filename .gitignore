@@ -4,4 +4,6 @@ notebooks/*
 .idea/*
 generated_data/
 generated_data_tfrecords/
+*.ipynb
+.ipynb_checkpoints/*
 

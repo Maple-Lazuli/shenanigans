@@ -41,9 +41,11 @@ def read_labels(file_name):
         file.read(8)  # skip header bytes
         label = file.read(1)
         while len(label) == 1:
-            label_list.append(np.frombuffer(label, dtype=np.uint8))
+            label_ohe = np.zeros(10, dtype=np.int)
+            label_ohe[np.frombuffer(label, dtype=np.uint8)] = 1
+            label_list.append(label_ohe)
             label = file.read(1)
-    return np.array(label_list).flatten()
+    return np.array(label_list)
 
 
 def _int64_feature(value):
@@ -75,7 +77,7 @@ def build_tf_example(example):
         "height": _int64_feature(image.shape[0]),
         "width": _int64_feature(image.shape[1]),
         "depth": _int64_feature(0) if len(image.shape) < 3 else _int64_feature(image.shape[2]),
-        "label": _int64_feature(annotation),
+        "label": _bytes_feature(annotation.tobytes()),
         "image_raw": _bytes_feature(image.flatten().tobytes())
     }
 
@@ -109,7 +111,7 @@ def build_tf_dataset(directory):
         elif file.find("train-images.idx3-ubyte") != -1:
             train_images = read_images(file)
         elif file.find("train-labels.idx1-ubyte") != -1:
-            train_labels = read_images(file)
+            train_labels = read_labels(file)
 
     train_pairs = [(image, label) for image, label in zip(train_images, train_labels)]
     test_pairs =  [(image, label) for image, label in zip(test_images, test_labels)]
