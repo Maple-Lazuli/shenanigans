@@ -21,7 +21,6 @@ def parse_records(example_proto):
     image = tf.cast(image, tf.float32)
     label = tf.io.decode_raw(features_parsed["label"], tf.int64)
     label = tf.cast(label, tf.float32)
-
     return image, label
 
 
@@ -114,7 +113,7 @@ class MNISTModel(object):
                         print(
                             f"accuracy for epoch {i} is: {running_sum / number_of_comparisons} "
                             f"from successes  {running_sum} out of {number_of_comparisons} trials")
-        if save_location is not None:
+        if save:
             saver.save(self.sess, save_location)
 
     def _build_mnist_model(self):
@@ -182,6 +181,11 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', type=int,
                         default=0.001,
                         help='The learning rate to use during training')
+
+    parser.add_argument('--save', type=bool,
+                        default=False,
+                        help='Whether or not to save the model')
+
     parser.add_argument('--save_location', type=str,
                         default="./model/model.ckpt",
                         help='The location to save the model in')

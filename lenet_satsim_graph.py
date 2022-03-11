@@ -98,24 +98,21 @@ class MNISTModel(object):
     def train(self, epochs, save=False, save_location=None):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver()
-        matches_sum = tf.Variable(0)
-        num_matches = tf.Variable(0)
         self.sess.run(init)
         for i in range(epochs):
             try:
                 self.sess.run(self.train_iterator.initializer)
-                # TODO implement loop again
                 while True:
                     batch_x, batch_y = self.sess.run(self.next_train)
-                    # TODO: Ask Justin why I need to run these seperately
-                    self.sess.run(self.minimize,
+                    (_, batch_accuracy) = self.sess.run([self.minimize,
+                                   self.batch_accuracy],
                                   feed_dict={self.X: batch_x,
                                              self.y_true: batch_y,
                                              self.hold_prob: 0.5})
             except tf.errors.OutOfRangeError:
                 if i % 2 == 0:
                     try:
-                        # TODO refactor self.train_iterator.get_next() out of the training loop
+
                         self.sess.run(self.valid_iterator.initializer)
                         running_sum = 0
                         number_of_comparisons = 0
@@ -177,6 +174,14 @@ class MNISTModel(object):
         with tf.name_scope("train"):
             minimize = optimizer.minimize(cross_entropy)
 
+        with tf.name_scope("metrics"):
+            # find correct predictions
+            matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.y_pred, axis=1),
+                                         tf.compat.v1.argmax(input=self.y_true, axis=1))
+            # find the number of correct predictions
+            self.batch_accuracy = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
+
+        # TODO: refactor your names. X -> input_image_batch
         return minimize, X, y_pred, y_true, hold_prob
 
 
