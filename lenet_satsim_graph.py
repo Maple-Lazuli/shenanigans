@@ -17,11 +17,11 @@ def parse_satsim_record(example_proto):
         "height": tf.io.FixedLenFeature([], dtype=tf.int64),
         "width": tf.io.FixedLenFeature([], dtype=tf.int64),
         "depth": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "field_of_view_x": tf.io.VarLenFeature(tf.float32),
-        "field_of_view_y": tf.io.VarLenFeature(tf.float32),
+        "field_of_view_x": tf.io.FixedLenFeature([], dtype=tf.float32),
+        "field_of_view_y": tf.io.FixedLenFeature([], dtype=tf.float32),
         "stray_light": tf.io.FixedLenFeature([], dtype=tf.int64),
-        "label": tf.io.VarLenFeature(dtype=tf.string),
-        "image_raw": tf.io.VarLenFeature(dtype=tf.string),
+        'label': tf.io.FixedLenFeature([], tf.string),
+        'image_raw': tf.io.FixedLenFeature([], tf.string)
     }
     # Parse the example
     features_parsed = tf.io.parse_single_example(
@@ -30,18 +30,13 @@ def parse_satsim_record(example_proto):
     width = tf.cast(features_parsed["width"], tf.int64)
     height = tf.cast(features_parsed["height"], tf.int64)
     depth = tf.cast(features_parsed["depth"], tf.int64)
-    iFOVx = tf.cast(tf.sparse.to_dense(features_parsed["field_of_view_x"]), tf.float32)
-    iFOVy = tf.cast(tf.sparse.to_dense(features_parsed["field_of_view_y"]), tf.float32)
-    # TODO Ask Justin what this is doing.
-    image = tf.sparse.to_dense(
-        features_parsed["image_raw"], default_value=""
-    )
-    image = tf.io.decode_raw(image, tf.uint16)
+    iFOVx = tf.cast(features_parsed["field_of_view_x"], tf.float32)
+    iFOVy = tf.cast(features_parsed["field_of_view_y"], tf.float32)
+
+    image = tf.io.decode_raw(features_parsed["image_raw"], tf.uint16)
     image = tf.cast(image, tf.float32)
-    label = tf.sparse.to_dense(
-        features_parsed["label"], default_value=""
-    )
-    label = tf.io.decode_raw(label, tf.int64)
+
+    label = tf.io.decode_raw(features_parsed["label"], tf.int64)
     label = tf.cast(label, tf.float32)
 
     return image, label
@@ -111,8 +106,8 @@ class MNISTModel(object):
                 while True:
                     batch_x, batch_y = self.sess.run(self.next_train)
                     # TODO: Ask Justin why I need to run these seperately
-                    batch_x = self.sess.run(tf.reshape(batch_x, [-1, 262144]))
-                    batch_y = self.sess.run(tf.reshape(batch_y, [-1, 5]))
+                    # batch_x = self.sess.run(tf.reshape(batch_x, [-1, 262144]))
+                    # batch_y = self.sess.run(tf.reshape(batch_y, [-1, 5]))
 
                     self.sess.run(self.minimize,
                                   feed_dict={self.X: batch_x,
@@ -125,11 +120,8 @@ class MNISTModel(object):
                     print(f"finished epoch {i} with accuracy: ")
                     try:
                         # TODO refactor self.train_iterator.get_next() out of the training loop
-                        # TODO figureout how to use all of the training batches
                         test_x, test_y = self.sess.run(self.next_valid)
 
-                        test_x = self.sess.run(tf.reshape(test_x, [-1, 262144]))
-                        test_y = self.sess.run(tf.reshape(test_y, [-1, 5]))
                         matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.y_pred, axis=1),
                                                      tf.compat.v1.argmax(input=self.y_true, axis=1))
 
@@ -192,7 +184,7 @@ def cli_main(flags):
 
     train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
                                 batch_size=flags.batch_size)
-    test_df = DatasetGenerator(test_records, parse_function=parse_satsim_record, shuffle=True, batch_size=10)
+    test_df = DatasetGenerator(test_records, parse_function=parse_satsim_record, shuffle=True, batch_size=50)
 
     with tf.compat.v1.Session() as sess:
         sess.run

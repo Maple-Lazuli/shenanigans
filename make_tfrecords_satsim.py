@@ -74,6 +74,7 @@ def build_tf_example(example):
     except:
         print("error parsing fits")
         return None
+
     features = {
         "height": _int64_feature(height),
         "width": _int64_feature(width),

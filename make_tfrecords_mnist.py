@@ -73,6 +73,7 @@ def build_tf_example(example):
     TF Example
     """
     image, annotation = example
+
     feature = {
         "height": _int64_feature(image.shape[0]),
         "width": _int64_feature(image.shape[1]),
