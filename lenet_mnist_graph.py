@@ -83,7 +83,6 @@ class MNISTModel(object):
         saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
         for i in range(epochs):
-            print(f'starting epoch {i} of {epochs}')
             try:
                 self.sess.run(self.train_iterator.initializer)
                 while True:
@@ -93,23 +92,28 @@ class MNISTModel(object):
                                              self.y_true: batch_y,
                                              self.hold_prob: 0.5})
             except tf.errors.OutOfRangeError:
-                pass
-                print(f"finished epoch {i}")
                 if i % 2 == 0:
-                    self.sess.run(self.valid_iterator.initializer)
-                    print(f"finished epoch {i} with accuracy: ")
                     try:
                         # TODO refactor self.train_iterator.get_next() out of the training loop
-                        test_x, test_y = self.sess.run(self.next_valid)
-                        matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.y_pred, axis=1),
-                                                     tf.compat.v1.argmax(input=self.y_true, axis=1))
+                        self.sess.run(self.valid_iterator.initializer)
+                        running_sum = 0
+                        number_of_comparisons = 0
+                        while True:
+                            test_x, test_y = self.sess.run(self.next_valid)
+                            # find correct predictions
+                            matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.y_pred, axis=1),
+                                                         tf.compat.v1.argmax(input=self.y_true, axis=1))
+                            # find the number of correct predictions
+                            acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
+                            # add the number of correct predictions to the running sum
+                            running_sum += self.sess.run(acc, feed_dict={self.X: test_x, self.y_true: test_y,
+                                                                         self.hold_prob: 1.0})
+                            number_of_comparisons += test_y.shape[0]
 
-                        acc = tf.compat.v1.reduce_mean(input_tensor=tf.compat.v1.cast(matches, tf.float32))
-
-                        print(self.sess.run(acc, feed_dict={self.X: test_x, self.y_true: test_y,
-                                                            self.hold_prob: 1.0}))
                     except tf.errors.OutOfRangeError:
-                        pass
+                        print(
+                            f"accuracy for epoch {i} is: {running_sum / number_of_comparisons} "
+                            f"from successes  {running_sum} out of {number_of_comparisons} trials")
         if save_location is not None:
             saver.save(self.sess, save_location)
 
@@ -160,7 +164,7 @@ def cli_main(flags):
     test_records = "./mnist_tf/test/mnist_test.tfrecords"
 
     train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
-    test_df = DatasetGenerator(test_records, parse_function=parse_records, shuffle=True, batch_size=3000)
+    test_df = DatasetGenerator(test_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
 
     with tf.compat.v1.Session() as sess:
         sess.run
