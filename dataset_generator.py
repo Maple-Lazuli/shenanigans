@@ -10,6 +10,7 @@ class DatasetGenerator(object):
                  batch_size=1,
                  num_threads=1,
                  buffer=30):
+        self.location = tfrecord
         self.num_examples = None
         self.input_shape = None
         self.batch_size = batch_size
@@ -60,3 +61,22 @@ class DatasetGenerator(object):
         data.prefetch(buffer_size=buffer)
 
         return data
+
+    def get_size(self):
+        iterator = self.get_iterator()
+        next_batch = iterator.get_next()
+        iterations = 0
+        with tf.compat.v1.Session() as sess:
+            try:
+                sess.run(iterator.initializer)
+                while True:
+                    sess.run(next_batch)
+                    iterations += 1
+            except tf.errors.OutOfRangeError:
+                return self.batch_size * iterations
+
+    def get_batch_size(self):
+        return self.batch_size
+
+    def get_location(self):
+        return self.location

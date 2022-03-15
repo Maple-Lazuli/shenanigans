@@ -5,6 +5,7 @@ import json
 import random
 import astropy.io.fits
 
+
 def get_labels(path):
     """
     The generated data stores the labels for the images in the directory structure and the purpose of this function is
@@ -69,6 +70,7 @@ def build_tf_example(example):
     label = np.zeros(5, dtype=np.int)
     label[example['class_number']] = 1
     stray_light = example['has_stray_light']
+    class_name = example['class_name']
     try:
         image_raw = astropy.io.fits.getdata(example['fits_image_path']).astype(np.uint16)
     except:
@@ -82,6 +84,7 @@ def build_tf_example(example):
         "field_of_view_x": _floats_feature(field_of_view_x),
         "field_of_view_y": _floats_feature(field_of_view_y),
         "stray_light": _int64_feature(stray_light),
+        "class_name": _bytes_feature(class_name.encode()),
         "label": _bytes_feature(label.tobytes()),
         "image_raw": _bytes_feature(image_raw.tobytes())
     }

@@ -77,7 +77,7 @@ class MNISTModel(object):
         with tf.name_scope("mnist_model"):
             self.minimize, self.X, self.y_pred, self.y_true, self.hold_prob = self._build_mnist_model()
 
-    def train(self, epochs, save_location=None):
+    def train(self, epochs, save,  save_location=None):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
