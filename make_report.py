@@ -271,7 +271,7 @@ class Report:
         return heading + section_desc + parameters
 
     def make_metrics_section(self):
-        metrics_str = "# Metrics\n"
+        metrics_str = "# Peformance\n"
         # blurb for section details
         for metric in self.metrics:
             metrics_str += f"![image]({metric.create_plot(self.write_directory)})\n"

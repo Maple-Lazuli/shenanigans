@@ -5,11 +5,11 @@
 # Hyperparameters 
 This section documents the hyperparameters used for this session. 
 1. learning_rate: 0.001
-2. epochs: 3
-# Metrics
-![image](images/f4e2bb710d75dab1205fd7a97b307725.png)
-![image](images/de7391dc00e596ab03e78865eade9366.png)
-![image](images/ff5a788814bafac2528815c97d8d7fc3.png)
+2. epochs: 1
+# Peformance
+![image](images/983e87ac0e74d39c4a0c929439937fe4.png)
+![image](images/d235c7c2c753949cf6b52c81127468cb.png)
+![image](images/a6d55ed8c89b96db02cb6aba0bd2ff2b.png)
 # Datasets 
 ### Training Set 
 The training set located at ./generated_data_tfrecords/train/satsim_train.tfrecords consists of 1500, served in batch sizes of 50.
@@ -17,34 +17,34 @@ The training set located at ./generated_data_tfrecords/train/satsim_train.tfreco
 The testing set located at ./generated_data_tfrecords/test/satsim_test.tfrecords consists of 150, served in batch sizes of 50.
 ### Test Set / Training Set Comparison 
 This section compares the contents of the test and train sets used.
-![image](./images/2e8bbf3b56090709670bdbcfed8a9c62.png)
-![image](./images/3d5954fa4d14b0dde00d90aa0973e85e.png)
- ![image](./images/8d27e9c2bcc331ae893b189344ef547a.png)
-![image](./images/74000af466662d3fc5e217760d8c260b.png)
- ![image](./images/0c4314874425fed7be0d7118106ee46f.png)
-![image](./images/06dd2baccbc97644a1bae215911322ae.png)
- ![image](./images/8669f4cf72fa20ddced71400a7c89df4.png)
-![image](./images/4905391db19b1f700a32522be2b317cf.png)
- ![image](./images/f230d5c1278e06e4e171a0adca18eb69.png)
-![image](./images/b1ae010df13eae6c21d6110ba6b14ae2.png)
- ![image](./images/7ea5a7255a5273c9298ebd026cf34661.png)
-![image](./images/984aefa667b371cd633f3668bfb65117.png)
- ![image](./images/64f06b45aadb4447fc0ac3e881f5220f.png)
-![image](./images/c31c2ce3cc4b09e9fa56961ad098a11a.png)
- ![image](./images/7a5cd916824e67d213480d33f842a3e1.png)
-![image](./images/b5f81e72ee429bf0f3838c87634536ba.png)
- ![image](./images/119b3eeb60c6450f2e90829420213441.png)
-![image](./images/2e352fa8c7dd0fc8e5c938defe917834.png)
- ![image](./images/7b5374418f567bd3821acbb54daeac21.png)
-![image](./images/982bf905ad321ea102f28a6221d8f219.png)
- ![image](./images/40246e885cd452e7599b48b205b6f5d5.png)
-![image](./images/8b3146974ac5f8ae48ef3064864910ef.png)
- ![image](./images/b62cf7f10c5bb8ae89f2a6fa58940574.png)
-![image](./images/36a25f14819359e01f41d6a3a83d3262.png)
- ![image](./images/1c71c9b0f91b8229e4960ca558ff37f4.png)
-![image](./images/d175b7d88f64c5016e15446cebfca0a5.png)
- ![image](./images/d23da9611f55ceaaf4a58328dc0b6ad4.png)
-![image](./images/1ab2372dfe29628eab8a19fc906a29d6.png)
+![image](./images/0e2bd154dbab4555c0fd54f687650d76.png)
+![image](./images/7d2b9bed5701c6a5c1271bea39981b05.png)
+ ![image](./images/41c03c225ddfc5ac9170ba34bcf99127.png)
+![image](./images/05685666bd4f481f51d719594f58ca55.png)
+ ![image](./images/8adba9d4c8e71457efd009fe34ea72dd.png)
+![image](./images/33ace36eafd2d3b05a85cb833d4ca505.png)
+ ![image](./images/f02bbec3985efb08f6716082ae83513a.png)
+![image](./images/c3707c4c2a982a6242dffe9cc50c1e0d.png)
+ ![image](./images/90a8557de75e40358a8d7bf89744bafc.png)
+![image](./images/78d27f3e302539c348bb77028c2b9574.png)
+ ![image](./images/b7674a95593915041e57749d5442698c.png)
+![image](./images/8f5014db35e062f33b5c8ec510bf8374.png)
+ ![image](./images/12e205d8adcd1957c8c869ae621f6e4b.png)
+![image](./images/c10d430d8f986e0f18501d9d3ca1a7ce.png)
+ ![image](./images/a6836ce2c6aa64f091dd277fe6a1494d.png)
+![image](./images/c3fd4e85a6d11906a881c3422352f9d9.png)
+ ![image](./images/d790d93f32b1eee99a893f4ce115c99f.png)
+![image](./images/a73a512a70377b4bd2857e7dbccb8b0a.png)
+ ![image](./images/f2a0122210e61898a2f5a2e15ab2803d.png)
+![image](./images/5f30f2618a16cee3824ead4e1bef7cc4.png)
+ ![image](./images/844723c38ababc6482354919c3690673.png)
+![image](./images/2aa4f4952f069901831117c81c28b3ec.png)
+ ![image](./images/9897a8adf28af95f215576a36b85e977.png)
+![image](./images/6173956df7ac99f6f2f3344c39fcf8e6.png)
+ ![image](./images/6d811c47a53a3f9983b4eb1ef37071f1.png)
+![image](./images/4ba4e3b52b8297f9338aa4edd01f3cf6.png)
+ ![image](./images/82fec14cdd604916f39cfe2141a51764.png)
+![image](./images/930a40663a77262c913c990ce44db345.png)
  # Dataset Examples
 This section depicts one input for each label the model is expected to learn.
 ### Example 10. height:512
@@ -55,17 +55,8 @@ This section depicts one input for each label the model is expected to learn.
 5. stray_light:0
 6. class_name:b'collision_high'
 7. label:[0. 1. 0. 0. 0.]
-![image](images/c34077afae2e08a73e8081693ec0cefc.png)
+![image](images/80bbb9a48934a49733543ccd88040ac7.png)
 ### Example 20. height:512
-1. width:512
-2. depth:16
-3. field_of_view_x:0.0006727635045535862
-4. field_of_view_y:0.0006727635045535862
-5. stray_light:0
-6. class_name:b'collision_low'
-7. label:[0. 0. 1. 0. 0.]
-![image](images/6f41268875ce379326e13280c4a01367.png)
-### Example 30. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -73,17 +64,8 @@ This section depicts one input for each label the model is expected to learn.
 5. stray_light:0
 6. class_name:b'breakup'
 7. label:[0. 0. 0. 0. 1.]
-![image](images/867d39ef89de0b8be42ce9ca24dfdb65.png)
-### Example 40. height:512
-1. width:512
-2. depth:16
-3. field_of_view_x:0.0006727635045535862
-4. field_of_view_y:0.0006727635045535862
-5. stray_light:0
-6. class_name:b'rpo'
-7. label:[0. 0. 0. 1. 0.]
-![image](images/f3d9c15346f450ad7b495250c9059234.png)
-### Example 50. height:512
+![image](images/d1ab310a8f5d8119567675bf232d194e.png)
+### Example 30. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -91,4 +73,22 @@ This section depicts one input for each label the model is expected to learn.
 5. stray_light:0
 6. class_name:b'nominal'
 7. label:[1. 0. 0. 0. 0.]
-![image](images/8a711a424db65c71949f8fc6414a38c9.png)
+![image](images/f74f915b707cab99959519cc0e1bcd31.png)
+### Example 40. height:512
+1. width:512
+2. depth:16
+3. field_of_view_x:0.0006727635045535862
+4. field_of_view_y:0.0006727635045535862
+5. stray_light:0
+6. class_name:b'collision_low'
+7. label:[0. 0. 1. 0. 0.]
+![image](images/04c69b304a0874ff6e8b9bdc2561f326.png)
+### Example 50. height:512
+1. width:512
+2. depth:16
+3. field_of_view_x:0.0006727635045535862
+4. field_of_view_y:0.0006727635045535862
+5. stray_light:0
+6. class_name:b'rpo'
+7. label:[0. 0. 0. 1. 0.]
+![image](images/59a0666fc96fb5e68e55e8d25f8950e1.png)

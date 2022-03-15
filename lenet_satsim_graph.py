@@ -147,10 +147,9 @@ class MNISTModel(object):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
-
-        batch_accuracy_metric = Metric(title="Batch Accuracy", horizontal_label="Batches", vertical_label="Matches")
-        epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Loss")
-        epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Loss")
+        loss_metric = Metric(title="Loss", horizontal_label="Training Batches", vertical_label="Loss")
+        epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Error")
+        epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
 
         for i in range(epochs):
             try:
@@ -160,12 +159,12 @@ class MNISTModel(object):
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
-                    (_, batch_accuracy) = self.sess.run([self.minimize,
+                    (loss, batch_accuracy) = self.sess.run([self.minimize,
                                                          self.batch_accuracy],
                                                         feed_dict={self.input_image_batch: batch_x,
                                                                    self.true_label: batch_y,
                                                                    self.hold_prob: 0.5})
-                    batch_accuracy_metric.add("batch_accuracy", batch_accuracy)
+                    loss_metric.add("loss", loss)
 
                     batch_match_list.append(batch_accuracy)
 
@@ -197,7 +196,7 @@ class MNISTModel(object):
 
         if self.reporter is not None:
             self.reporter.add_hyperparameter({'epochs': epochs})
-            self.reporter.add_metric(batch_accuracy_metric)
+            self.reporter.add_metric(loss_metric)
             self.reporter.add_metric(epoch_mse_metric)
             self.reporter.add_metric(epoch_mae_metric)
 
