@@ -2,8 +2,28 @@ import tensorflow as tf
 import numpy as np
 import argparse
 from dataset_generator import DatasetGenerator
+from make_report import Report
+from metrics import Metric
 
 tf.compat.v1.disable_eager_execution()
+
+
+def calculate_mse(scores):
+    scores = np.array(scores)
+
+    return np.sum((50 - scores) * (50 - scores)) / len(scores)
+
+
+def calculate_mae(scores):
+    scores = np.array(scores)
+    return np.sum((50 - scores)) / len(scores)
+
+
+def dataset_value_parser(key, value):
+    if key == "label":
+        return value.argmax()
+    else:
+        return value
 
 
 def parse_records(example_proto):
@@ -17,11 +37,25 @@ def parse_records(example_proto):
     features_parsed = tf.io.parse_single_example(
         serialized=example_proto, features=features
     )
+
+    width = tf.cast(features_parsed["width"], tf.int64)
+    height = tf.cast(features_parsed["height"], tf.int64)
+    depth = tf.cast(features_parsed["depth"], tf.int64)
+
     image = tf.io.decode_raw(features_parsed["image_raw"], tf.uint8)
     image = tf.cast(image, tf.float32)
     label = tf.io.decode_raw(features_parsed["label"], tf.int64)
     label = tf.cast(label, tf.float32)
-    return image, label
+
+    return_features = {
+        "height": height,
+        "width": width,
+        "depth": depth,  # 16 bits per pixel for FITS images
+        "label": label,
+        "input": image
+    }
+
+    return return_features
 
 
 def init_weights(shape):
@@ -63,7 +97,13 @@ class MNISTModel(object):
                  valid_dataset,
                  inputs=None,
                  learning_rate=1.0,
-                 writer=None):
+                 writer=None,
+                 reporter=None):
+
+        self.desc = """
+        Implementation of a variant of lenet to classify handwritten digits between 0 and 9. 
+        """
+        self.reporter = reporter
         self.learning_rate = learning_rate
         self.sess = sess
         self.writer = writer
@@ -75,54 +115,80 @@ class MNISTModel(object):
         self.next_valid = self.valid_iterator.get_next()
 
         with tf.name_scope("mnist_model"):
-            self.minimize, self.X, self.y_pred, self.y_true, self.hold_prob = self._build_mnist_model()
+            self._build_mnist_model()
 
-    def train(self, epochs, save,  save_location=None):
+        if reporter is not None:
+            self.reporter = reporter
+            self.reporter.set_introduction(self.desc)
+            self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
+            self.reporter.set_dataset_value_parser(dataset_value_parser)
+            self.reporter.set_ignore_list(['input', 'depth'])
+
+    def train(self, epochs, save, save_location=None):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
+
+        loss_metric = Metric(title="Loss", horizontal_label="Training Steps", vertical_label="Loss")
+        epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Error")
+        epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
+
         for i in range(epochs):
             try:
                 self.sess.run(self.train_iterator.initializer)
+                batch_match_list = []
                 while True:
-                    batch_x, batch_y = self.sess.run(self.next_train)
-                    self.sess.run(self.minimize,
-                                  feed_dict={self.X: batch_x,
-                                             self.y_true: batch_y,
-                                             self.hold_prob: 0.5})
-            except tf.errors.OutOfRangeError:
-                if i % 2 == 0:
-                    try:
-                        # TODO refactor self.train_iterator.get_next() out of the training loop
-                        self.sess.run(self.valid_iterator.initializer)
-                        running_sum = 0
-                        number_of_comparisons = 0
-                        while True:
-                            test_x, test_y = self.sess.run(self.next_valid)
-                            # find correct predictions
-                            matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.y_pred, axis=1),
-                                                         tf.compat.v1.argmax(input=self.y_true, axis=1))
-                            # find the number of correct predictions
-                            acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
-                            # add the number of correct predictions to the running sum
-                            running_sum += self.sess.run(acc, feed_dict={self.X: test_x, self.y_true: test_y,
-                                                                         self.hold_prob: 1.0})
-                            number_of_comparisons += test_y.shape[0]
+                    features = self.sess.run(self.next_train)
+                    batch_x = features['input']
+                    batch_y = features['label']
+                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy ,self.minimize,
+                                                         self.batch_accuracy],
+                                                        feed_dict={self.image_input: batch_x,
+                                                                   self.actual_label: batch_y,
+                                                                   self.hold_prob: 0.5})
 
-                    except tf.errors.OutOfRangeError:
-                        print(
-                            f"accuracy for epoch {i} is: {running_sum / number_of_comparisons} "
-                            f"from successes  {running_sum} out of {number_of_comparisons} trials")
+                    loss_metric.add("loss", loss)
+                    batch_match_list.append(batch_accuracy)
+
+            except tf.errors.OutOfRangeError:
+                epoch_mse_metric.add("training_loss", calculate_mse(batch_match_list))
+                epoch_mae_metric.add("training_loss", calculate_mae(batch_match_list))
+                try:
+                    self.sess.run(self.valid_iterator.initializer)
+                    batch_match_list = []
+                    while True:
+                        features = self.sess.run(self.next_valid)
+                        test_x = features['input']
+                        test_y = features['label']
+                        # Find occurences where there are matches
+                        matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
+                                                     tf.compat.v1.argmax(input=self.actual_label, axis=1))
+                        # Find the number of correct predictions
+                        acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
+                        # add the number of correct predictions to the running sum
+                        score = self.sess.run(acc, feed_dict={self.image_input: test_x,
+                                                                     self.actual_label: test_y,
+                                                                     self.hold_prob: 1.0})
+                        batch_match_list.append(score)
+                except tf.errors.OutOfRangeError:
+                    epoch_mse_metric.add("test_loss", calculate_mse(batch_match_list))
+                    epoch_mae_metric.add("test_loss", calculate_mae(batch_match_list))
         if save:
             saver.save(self.sess, save_location)
 
+        if self.reporter is not None:
+            self.reporter.add_hyperparameter({'epochs': epochs})
+            self.reporter.add_metric(loss_metric)
+            self.reporter.add_metric(epoch_mse_metric)
+            self.reporter.add_metric(epoch_mae_metric)
+
     def _build_mnist_model(self):
 
-        X = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="X")
+        self.image_input = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="X")
 
-        y_true = tf.compat.v1.placeholder(tf.float32, shape=[None, 10], name="y_true")
+        self.actual_label = tf.compat.v1.placeholder(tf.float32, shape=[None, 10], name="y_true")
 
-        x_image = tf.reshape(X, [-1, 28, 28, 1])
+        x_image = tf.reshape(self.image_input, [-1, 28, 28, 1])
 
         with tf.name_scope("Convolutional_1"):
             convo_1 = convolutional_layer(x_image, shape=[6, 6, 1, 32])
@@ -136,39 +202,53 @@ class MNISTModel(object):
         with tf.name_scope("Fully_Connected_1"):
             full_layer_one = tf.nn.relu(normal_full_layer(convo_2_flat, 1024))
 
-        hold_prob = tf.compat.v1.placeholder(tf.float32, name="hold_prob")
+        self.hold_prob = tf.compat.v1.placeholder(tf.float32, name="hold_prob")
         with tf.name_scope("Fully_Connected_With_Dropout"):
-            full_one_dropout = tf.nn.dropout(full_layer_one, rate=1 - hold_prob)
+            full_one_dropout = tf.nn.dropout(full_layer_one, rate=1 - self.hold_prob)
 
         with tf.name_scope("Y_Prediction"):
-            y_pred = normal_full_layer(full_one_dropout, 10)
+            self.predicted_label = normal_full_layer(full_one_dropout, 10)
 
         with tf.name_scope("Loss"):
-            cross_entropy = tf.compat.v1.reduce_mean(
+            self.cross_entropy = tf.compat.v1.reduce_mean(
                 input_tensor=tf.compat.v1.nn.softmax_cross_entropy_with_logits(
-                    labels=tf.compat.v1.stop_gradient(y_true),
-                    logits=y_pred))
+                    labels=tf.compat.v1.stop_gradient(self.actual_label),
+                    logits=self.predicted_label))
 
         with tf.name_scope("Optimizer"):
             optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         with tf.name_scope("train"):
-            minimize = optimizer.minimize(cross_entropy)
+            self.minimize = optimizer.minimize(self.cross_entropy)
 
-        return minimize, X, y_pred, y_true, hold_prob
-
+        with tf.name_scope("metrics"):
+            # find correct predictions
+            matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
+                                         tf.compat.v1.argmax(input=self.actual_label, axis=1))
+            # find the number of correct predictions
+            self.batch_accuracy = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
 
 def cli_main(flags):
-    train_records = "./mnist_tf/train/mnist_train.tfrecords"
-    test_records = "./mnist_tf/test/mnist_test.tfrecords"
+    train_records = flags.train_set
+    test_records = flags.test_set
 
     train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
     test_df = DatasetGenerator(test_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
 
+    reporter = None
+    if flags.report:
+        reporter = Report()
+        reporter.set_train_set(train_df)
+        reporter.set_test_set(test_df)
+        reporter.set_write_directory(flags.report_dir)
+
     with tf.compat.v1.Session() as sess:
-        sess.run
-        model = MNISTModel(sess, train_df, test_df, learning_rate=flags.learning_rate)
-        model.train(epochs=flags.epochs, save_location=flags.save_location)
+        # sess.run # i dont remember why this is here
+        model = MNISTModel(sess, train_df, test_df, learning_rate=flags.learning_rate, reporter=reporter)
+        model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
+
+    if flags.report:
+        reporter.write_report('lenet_mnist_train')
 
 
 if __name__ == "__main__":
@@ -183,16 +263,32 @@ if __name__ == "__main__":
                         help='The learning rate to use during training')
 
     parser.add_argument('--save', type=bool,
-                        default=False,
+                        default=True,
                         help='Whether or not to save the model')
 
     parser.add_argument('--save_location', type=str,
-                        default="./model/model.ckpt",
+                        default="./mnist_model/mnist",
                         help='The location to save the model in')
 
     parser.add_argument('--batch_size', type=int,
                         default=50,
                         help='the number of images to train on at once')
+
+    parser.add_argument('--train_set', type=str,
+                        default="./mnist_tf/train/mnist_train.tfrecords",
+                        help='the location of the training set')
+
+    parser.add_argument('--test_set', type=str,
+                        default="./mnist_tf/test/mnist_test.tfrecords",
+                        help='the location of the test set')
+
+    parser.add_argument('--report', type=bool,
+                        default=False,
+                        help='Whether to create a report.')
+
+    parser.add_argument('--report_dir', type=str,
+                        default='./reports/',
+                        help='Where to save the reports.')
 
     parsed_flags, _ = parser.parse_known_args()
 

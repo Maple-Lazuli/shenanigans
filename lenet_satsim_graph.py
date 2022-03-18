@@ -11,11 +11,13 @@ tf.compat.v1.disable_eager_execution()
 def calculate_mse(scores):
     scores = np.array(scores)
 
-    return np.sum((50 - scores)*(50 - scores))/len(scores)
+    return np.sum((50 - scores) * (50 - scores)) / len(scores)
+
 
 def calculate_mae(scores):
     scores = np.array(scores)
-    return np.sum((50 - scores))/len(scores)
+    return np.sum((50 - scores)) / len(scores)
+
 
 def dataset_value_parser(key, value):
     if key == "class_name":
@@ -109,7 +111,7 @@ def normal_full_layer(input_layer, size):
     return tf.compat.v1.add(tf.compat.v1.matmul(input_layer, W), b, name="y_pred")
 
 
-class MNISTModel(object):
+class SatSimModel(object):
     def __init__(self,
                  sess,
                  train_dataset,
@@ -145,9 +147,9 @@ class MNISTModel(object):
     def train(self, epochs, save=False, save_location=None):
 
         init = tf.compat.v1.global_variables_initializer()
-        saver = tf.compat.v1.train.Saver()
+        saver = tf.compat.v1.train.Saver(write_version=1)
         self.sess.run(init)
-        loss_metric = Metric(title="Loss", horizontal_label="Training Batches", vertical_label="Loss")
+        loss_metric = Metric(title="Loss", horizontal_label="Training Steps", vertical_label="Loss")
         epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Error")
         epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
 
@@ -159,13 +161,12 @@ class MNISTModel(object):
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
-                    (loss, batch_accuracy) = self.sess.run([self.minimize,
-                                                         self.batch_accuracy],
-                                                        feed_dict={self.input_image_batch: batch_x,
-                                                                   self.true_label: batch_y,
-                                                                   self.hold_prob: 0.5})
+                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy, self.minimize,
+                                                               self.batch_accuracy],
+                                                              feed_dict={self.input_image_batch: batch_x,
+                                                                         self.true_label: batch_y,
+                                                                         self.hold_prob: 0.5})
                     loss_metric.add("loss", loss)
-
                     batch_match_list.append(batch_accuracy)
 
             except tf.errors.OutOfRangeError:
@@ -185,8 +186,8 @@ class MNISTModel(object):
                         acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
                         # add the number of correct predictions to the running sum
                         score = self.sess.run(acc, feed_dict={self.input_image_batch: test_x,
-                                                                     self.true_label: test_y,
-                                                                     self.hold_prob: 1.0})
+                                                              self.true_label: test_y,
+                                                              self.hold_prob: 1.0})
                         batch_match_list.append(score)
                 except tf.errors.OutOfRangeError:
                     epoch_mse_metric.add("test_loss", calculate_mse(batch_match_list))
@@ -229,7 +230,7 @@ class MNISTModel(object):
             self.predicted_label = normal_full_layer(full_one_dropout, 5)
 
         with tf.name_scope("Loss"):
-            cross_entropy = tf.compat.v1.reduce_mean(
+            self.cross_entropy = tf.compat.v1.reduce_mean(
                 input_tensor=tf.compat.v1.nn.softmax_cross_entropy_with_logits(
                     labels=tf.compat.v1.stop_gradient(self.true_label),
                     logits=self.predicted_label))
@@ -238,7 +239,7 @@ class MNISTModel(object):
             optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=self.learning_rate)
 
         with tf.name_scope("train"):
-            self.minimize = optimizer.minimize(cross_entropy)
+            self.minimize = optimizer.minimize(self.cross_entropy)
 
         with tf.name_scope("metrics"):
             # find correct predictions
@@ -249,7 +250,6 @@ class MNISTModel(object):
 
 
 def cli_main(flags):
-    # TODO refactor this to the CLI args
     train_records = flags.train_set
     test_records = flags.test_set
 
@@ -266,7 +266,7 @@ def cli_main(flags):
 
     with tf.compat.v1.Session() as sess:
         sess.run
-        model = MNISTModel(sess, train_df, test_df, learning_rate=flags.learning_rate, reporter=reporter)
+        model = SatSimModel(sess, train_df, test_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
 
     if flags.report:
@@ -289,7 +289,7 @@ if __name__ == "__main__":
                         help='Whether or not to save the model')
 
     parser.add_argument('--save_location', type=str,
-                        default="./model/model.ckpt",
+                        default="./model/satsim",
                         help='The location to save the model in')
 
     parser.add_argument('--train_set', type=str,
@@ -305,7 +305,7 @@ if __name__ == "__main__":
                         help='the number of images to train on at once')
 
     parser.add_argument('--report', type=bool,
-                        default=True,
+                        default=False,
                         help='Whether to create a report.')
 
     parser.add_argument('--report_dir', type=str,

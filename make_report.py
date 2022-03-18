@@ -4,7 +4,8 @@ import tensorflow as tf
 from datetime import datetime
 import hashlib
 from collections import Counter
-
+import argparse
+import os
 """
 Doc string here
 """
@@ -43,7 +44,7 @@ def create_example_rows(dataset, input_key, label_key, report_location):
 
     for idx,example in enumerate(examples):
         image = example[input_key].reshape(example['height'], example['width'])
-        return_str += f"### Example {idx + 1}"
+        return_str += f"### Example {idx + 1} \n"
         for idx, key in enumerate(example.keys()):
             if key != input_key:
                 return_str += f"{idx}. {key}:{example[key]}\n"
@@ -285,4 +286,41 @@ class Report:
             report_out.write(self.make_metrics_section())
             report_out.write(self.make_dataset_section())
             report_out.write(self.make_examples_section())
+
+def cli_main(flags):
+    file_list = []
+    # find the files in the report directory and any sub directories
+
+    print(f"Cleaning {flags.report_dir}")
+
+    for subdir, dirs, files in os.walk(flags.report_dir):
+        for file in files:
+            file_list.append(os.path.join(subdir, file))
+
+    # read in reports to one string.
+    report_strings = ""
+    for file in file_list:
+        if file[-3:] == ".md":
+            with open(file, 'r') as file_in:
+                report_strings += file_in.read()
+
+    # for files not listed in the report, remove them
+    for file in file_list:
+        if file[-4:] == ".png":
+            # get file name
+            file_name = file.split("/")[-1]
+            if report_strings.find(file_name) == -1:
+                print(f"Removing {file}")
+                os.remove(file)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--report_dir', type=str,
+                        default="./reports/",
+                        help='the location of the reports directory to clean')
+
+    parsed_flags, _ = parser.parse_known_args()
+
+    cli_main(parsed_flags)
 
