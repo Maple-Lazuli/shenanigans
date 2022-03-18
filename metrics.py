@@ -13,6 +13,18 @@ class Metric:
         self.metrics = dict()
 
     def add(self, key, value):
+        """
+        Adds a value to the metrics dictionary with the assumption
+
+        Parameters
+        ----------
+        key
+        value
+
+        Returns
+        -------
+
+        """
         if key not in self.metrics.keys():
             self.metrics[key] = [value]
         else:

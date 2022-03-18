@@ -6,12 +6,25 @@ import hashlib
 from collections import Counter
 import argparse
 import os
+
 """
-Doc string here
+Writes either a training report or a evaluation report. It creates plots showing the datasets, examples, and metrics
 """
 
 
 def get_dataset_report_examples(dataset, label_key):
+    """
+    Finds one example for each label for the report.
+
+    Parameters
+    ----------
+    dataset: The dataset to find examples in
+    label_key: the feature key that represents the label
+
+    Returns
+    -------
+    Returns a list containing one feature for each label
+    """
     # setup iterator
     iterator = dataset.get_iterator()
     next_batch = iterator.get_next()
@@ -39,20 +52,46 @@ def get_dataset_report_examples(dataset, label_key):
 
 
 def create_example_rows(dataset, input_key, label_key, report_location):
+    """
+    Creates plots based on the input examples, writes them to a subdirectory of the report_location and returns them
+    as a string to be added in the report
+
+    Parameters
+    ----------
+    dataset: The dataset to pull examples from
+    input_key: The feature key representing the image
+    label_key: The feature key representing the label to find examples for.
+    report_location: The location of the report. This function will save the plots to a subdirectory.
+
+    Returns
+    -------
+    Returns a string encoded in markdown to be added into the plot.
+    """
     examples = get_dataset_report_examples(dataset, label_key)
     return_str = ""
 
-    for idx,example in enumerate(examples):
+    for idx, example in enumerate(examples):
         image = example[input_key].reshape(example['height'], example['width'])
         return_str += f"### Example {idx + 1} \n"
         for idx, key in enumerate(example.keys()):
             if key != input_key:
-                return_str += f"{idx}. {key}:{example[key]}\n"
+                return_str += f"{idx + 1}. {key}:{example[key]}\n"
         return_str += f"![image]({create_raster_image(image, report_location)})\n"
     return return_str
 
 
 def create_raster_image(data, report_location):
+    """
+    Creates a raster image based on the data and saves the image to the specified location
+    Parameters
+    ----------
+    data: The data to create the raster image from
+    report_location: The location of the reports. This function will save the images to a sub directory
+
+    Returns
+    -------
+    Returns the location of the saved image relative to the reports directory
+    """
     fig, ax = plt.subplots(figsize=(15, 10))
     ax.imshow(data, cmap='gray')
     ax.grid(False)
@@ -67,6 +106,19 @@ def create_raster_image(data, report_location):
 
 
 def get_dataset_metrics(dataset, ignore_list, dataset_value_parser_fn):
+    """
+    Creates images depicting the number of features in the dataset, such as the number of occurences for each label.
+
+    Parameters
+    ----------
+    dataset: The dataset to poll numbers for
+    ignore_list: features of the dataset to ignore
+    dataset_value_parser_fn: function to assist with transforming dataset features to a presentable format
+
+    Returns
+    -------
+    returns a dictionary with the features
+    """
     # setup iterator
     iterator = dataset.get_iterator()
     next_batch = iterator.get_next()
@@ -95,10 +147,33 @@ def get_dataset_metrics(dataset, ignore_list, dataset_value_parser_fn):
 
 
 def dataset_value_parser(key, value):
+    """
+    The default parser with no special functionality
+
+    Parameters
+    ----------
+    key: The feature key
+    value: The feature value
+
+    Returns
+    -------
+    Returns the value passed in without a transformation
+    """
     return value
 
 
 def normalize_dict(d):
+    """
+    Normalizes the values in the dictionary
+
+    Parameters
+    ----------
+    d: The dictionary to normalize
+
+    Returns
+    -------
+    A normalized version of the dictionary
+    """
     summ = 0
     for key in d.keys():
         summ += d[key]
@@ -108,6 +183,22 @@ def normalize_dict(d):
 
 
 def create_bar_plot(train_set, test_set, feature_name, report_location, normalize=False):
+    """
+    Creates a side by side bar plot for the feature from the two datasets. It expects the datasets to have been passed
+    through get_dataset_metrics prior to use.
+
+    Parameters
+    ----------
+    train_set: The first dataset dictionary
+    test_set: The second dataset dictionary
+    feature_name: The feature to create a bar plot for
+    report_location: the location to save the plot in
+    normalize: A boolean indicating whether to normalize the data first
+
+    Returns
+    -------
+    A string representing the location on disk for the image location
+    """
     if normalize:
         train_counter = normalize_dict(Counter(train_set))
         test_counter = normalize_dict(Counter(test_set))
@@ -173,12 +264,9 @@ def create_bar_plot(train_set, test_set, feature_name, report_location, normaliz
     return f"./images/{image_name}.png"
 
 
+## TODO refactor to make a little more general and be used for evaluations too
 class Report:
-
     def __init__(self):
-        """
-
-        """
         self.introduction = None
         self.metrics = []
         self.test_set = None
@@ -187,8 +275,6 @@ class Report:
         self.hyper_parameters = dict()
         self.dataset_value_parser = dataset_value_parser
         self.ignore_list = []
-
-    # put setters here
 
     def set_introduction(self, introduction):
         self.introduction = introduction
@@ -228,8 +314,6 @@ class Report:
 
         training_desc = f"The training set located at {self.train_set.get_location()} consists of {self.train_set.get_size()}, served in batch sizes of {self.train_set.get_batch_size()}.\n"
 
-        # create a bar chart comparing feature counts.
-
         test_heading = "### Testing Set \n"
 
         test_desc = f"The testing set located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n"
@@ -255,7 +339,8 @@ class Report:
 
         section_desc = "This section depicts one input for each label the model is expected to learn.\n"
 
-        examples = create_example_rows(self.train_set, input_key = 'input', label_key = 'label', report_location = self.write_directory)
+        examples = create_example_rows(self.train_set, input_key='input', label_key='label',
+                                       report_location=self.write_directory)
 
         return heading + section_desc + examples
 
@@ -286,6 +371,7 @@ class Report:
             report_out.write(self.make_metrics_section())
             report_out.write(self.make_dataset_section())
             report_out.write(self.make_examples_section())
+
 
 def cli_main(flags):
     file_list = []
@@ -323,4 +409,3 @@ if __name__ == "__main__":
     parsed_flags, _ = parser.parse_known_args()
 
     cli_main(parsed_flags)
-

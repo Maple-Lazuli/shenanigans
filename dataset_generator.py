@@ -3,6 +3,9 @@ import numpy as np
 
 
 class DatasetGenerator(object):
+    """
+    Generates an iterable dataset from TF Records
+    """
     def __init__(self,
                  tfrecord,
                  parse_function,
@@ -63,6 +66,13 @@ class DatasetGenerator(object):
         return data
 
     def get_size(self):
+        """
+        Calculates the number of examples in the dataset
+
+        Returns
+        -------
+        The size of the dataset
+        """
         iterator = self.get_iterator()
         next_batch = iterator.get_next()
         iterations = 0
@@ -79,4 +89,10 @@ class DatasetGenerator(object):
         return self.batch_size
 
     def get_location(self):
+        """
+        Getter method for the location of the dataset on the disk
+        Returns
+        -------
+        A string representing the location of the dataset on disk
+        """
         return self.location

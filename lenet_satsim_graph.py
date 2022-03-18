@@ -9,17 +9,50 @@ tf.compat.v1.disable_eager_execution()
 
 
 def calculate_mse(scores):
+    """
+    Calculates mean squared error using the error from the training steps.
+    Parameters
+    ----------
+    scores: A list of errors
+
+    Returns
+    -------
+    MSE score from the list of errors
+    """
     scores = np.array(scores)
 
     return np.sum((50 - scores) * (50 - scores)) / len(scores)
 
 
 def calculate_mae(scores):
+    """
+    Calculates mean absolute error using the error from the training steps.
+    Parameters
+    ----------
+    scores: A list of errors
+
+    Returns
+    -------
+    MAE score from the list of errors
+    """
     scores = np.array(scores)
     return np.sum((50 - scores)) / len(scores)
 
 
 def dataset_value_parser(key, value):
+    """
+    A function to be passed to the reporter instance that performs transformations to some features to help with
+    rendering in a report.
+
+    Parameters
+    ----------
+    key: The key of the feature.
+    value: The value of the feature
+
+    Returns
+    -------
+    Returns either the feature or a transformation of the feature
+    """
     if key == "class_name":
         return value.decode('UTF-8')
     elif key == "label":
@@ -30,10 +63,15 @@ def dataset_value_parser(key, value):
 
 def parse_satsim_record(example_proto):
     """
-    This is the first step of the generator/augmentation chain.
-    :param example_proto: Example from a TFRecord file
-    :return: The raw image and padded bounding boxes corresponding to
-    this TFRecord example.
+    A function that describes how to parse the records in the TF Dataset for the DatasetGenerator Class
+
+    Parameters
+    ----------
+    example_proto: The extracted example from the TF dataset
+
+    Returns
+    -------
+    A feature dictionary with the proper datatypes for use in the model.
     """
     # Define how to parse the example
     features = {
@@ -120,7 +158,7 @@ class SatSimModel(object):
                  learning_rate=1.0,
                  writer=None,
                  reporter=None):
-
+        # Used in the overview section of the reporter
         self.desc = """
         Implementation of a variant of lenet to classify simulated satellite events observed through electro-optical imagry. 
         """
@@ -142,6 +180,8 @@ class SatSimModel(object):
             self.reporter.set_introduction(self.desc)
             self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
             self.reporter.set_dataset_value_parser(dataset_value_parser)
+            # The ignore list details features not to compare between the datsets.
+            # Input is in the list because each is approximately unique and depth is a constant
             self.reporter.set_ignore_list(['input', 'depth'])
 
     def train(self, epochs, save=False, save_location=None):
@@ -149,6 +189,8 @@ class SatSimModel(object):
         init = tf.compat.v1.global_variables_initializer()
         saver = tf.compat.v1.train.Saver(write_version=1)
         self.sess.run(init)
+
+        # Register metrics to go to the reporter
         loss_metric = Metric(title="Loss", horizontal_label="Training Steps", vertical_label="Loss")
         epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Error")
         epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")

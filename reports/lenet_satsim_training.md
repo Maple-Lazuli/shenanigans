@@ -47,7 +47,8 @@ This section compares the contents of the test and train sets used.
 ![image](./images/af6d4f27f5dbabcf8e0fab19a4ee552c.png)
  # Dataset Examples
 This section depicts one input for each label the model is expected to learn.
-### Example 10. height:512
+### Example 10. 
+1. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -56,7 +57,8 @@ This section depicts one input for each label the model is expected to learn.
 6. class_name:b'breakup'
 7. label:[0. 0. 0. 0. 1.]
 ![image](images/b68e6f191766c3a390b884f2921c96c0.png)
-### Example 20. height:512
+### Example 20. 
+1. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -65,7 +67,8 @@ This section depicts one input for each label the model is expected to learn.
 6. class_name:b'collision_high'
 7. label:[0. 1. 0. 0. 0.]
 ![image](images/2fdae634cfc6512e5cfa6b1cad6890dd.png)
-### Example 30. height:512
+### Example 30. 
+1. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -74,7 +77,8 @@ This section depicts one input for each label the model is expected to learn.
 6. class_name:b'nominal'
 7. label:[1. 0. 0. 0. 0.]
 ![image](images/b9c0aa5ddd04198671101ec63412bbf1.png)
-### Example 40. height:512
+### Example 40. 
+1. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862
@@ -83,7 +87,8 @@ This section depicts one input for each label the model is expected to learn.
 6. class_name:b'collision_low'
 7. label:[0. 0. 1. 0. 0.]
 ![image](images/6805042b89b9c4fb1549b0514f4c84e4.png)
-### Example 50. height:512
+### Example 50. 
+1. height:512
 1. width:512
 2. depth:16
 3. field_of_view_x:0.0006727635045535862

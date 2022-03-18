@@ -9,17 +9,49 @@ tf.compat.v1.disable_eager_execution()
 
 
 def calculate_mse(scores):
-    scores = np.array(scores)
+    """
+    Calculates mean squared error using the error from the training steps.
+    Parameters
+    ----------
+    scores: A list of errors
 
+    Returns
+    -------
+    MSE score from the list of errors
+    """
+    scores = np.array(scores)
     return np.sum((50 - scores) * (50 - scores)) / len(scores)
 
 
 def calculate_mae(scores):
+    """
+    Calculates mean absolute error using the error from the training steps.
+    Parameters
+    ----------
+    scores: A list of errors
+
+    Returns
+    -------
+    MAE score from the list of errors
+    """
     scores = np.array(scores)
     return np.sum((50 - scores)) / len(scores)
 
 
 def dataset_value_parser(key, value):
+    """
+    A function to be passed to the reporter instance that performs transformations to some features to help with
+    rendering in a report.
+
+    Parameters
+    ----------
+    key: The key of the feature.
+    value: The value of the feature
+
+    Returns
+    -------
+    Returns either the feature or a transformation of the feature
+    """
     if key == "label":
         return value.argmax()
     else:
@@ -27,6 +59,17 @@ def dataset_value_parser(key, value):
 
 
 def parse_records(example_proto):
+    """
+    A function that describes how to parse the records in the TF Dataset for the DatasetGenerator Class
+
+    Parameters
+    ----------
+    example_proto: The extracted example from the TF dataset
+
+    Returns
+    -------
+    A feature dictionary with the proper datatypes for use in the model.
+    """
     features = {
         'height': tf.io.FixedLenFeature([], tf.int64),
         'width': tf.io.FixedLenFeature([], tf.int64),
@@ -100,9 +143,11 @@ class MNISTModel(object):
                  writer=None,
                  reporter=None):
 
+        # Used in the overview section of the reporter
         self.desc = """
         Implementation of a variant of lenet to classify handwritten digits between 0 and 9. 
         """
+
         self.reporter = reporter
         self.learning_rate = learning_rate
         self.sess = sess
@@ -122,6 +167,8 @@ class MNISTModel(object):
             self.reporter.set_introduction(self.desc)
             self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
             self.reporter.set_dataset_value_parser(dataset_value_parser)
+            # The ignore list details features not to compare between the datsets.
+            # Input is in the list because each is approximately unique and depth is a constant
             self.reporter.set_ignore_list(['input', 'depth'])
 
     def train(self, epochs, save, save_location=None):
@@ -129,6 +176,7 @@ class MNISTModel(object):
         saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
 
+        # Register metrics to go to the reporter
         loss_metric = Metric(title="Loss", horizontal_label="Training Steps", vertical_label="Loss")
         epoch_mse_metric = Metric(title="Mean Squared Error", horizontal_label="Epochs", vertical_label="Error")
         epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
@@ -138,9 +186,11 @@ class MNISTModel(object):
                 self.sess.run(self.train_iterator.initializer)
                 batch_match_list = []
                 while True:
+
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
+
                     (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy ,self.minimize,
                                                          self.batch_accuracy],
                                                         feed_dict={self.image_input: batch_x,
@@ -160,7 +210,7 @@ class MNISTModel(object):
                         features = self.sess.run(self.next_valid)
                         test_x = features['input']
                         test_y = features['label']
-                        # Find occurences where there are matches
+                        # Find occurrences where there are matches
                         matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
                                                      tf.compat.v1.argmax(input=self.actual_label, axis=1))
                         # Find the number of correct predictions

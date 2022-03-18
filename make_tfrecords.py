@@ -6,6 +6,17 @@ import os
 import shutil
 
 def make_clean_dir(directory):
+    """
+    Clears the directory for re-writing
+
+    Parameters
+    ----------
+    directory: The directory to purge
+
+    Returns
+    -------
+    None
+    """
     if os.path.exists(directory):
         shutil.rmtree(directory)
     os.makedirs(directory)
