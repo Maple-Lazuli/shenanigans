@@ -182,7 +182,69 @@ def normalize_dict(d):
     return d
 
 
-def create_bar_plot(train_set, test_set, feature_name, report_location, normalize=False):
+def create_bar_plot(data_set, feature_name, report_location, normalize=False):
+    """
+    Creates a side by side bar plot for the feature from the two datasets. It expects the datasets to have been passed
+    through get_dataset_metrics prior to use.
+
+    Parameters
+    ----------
+    data_set: The dataset dictionary
+    feature_name: The feature to create a bar plot for
+    report_location: the location to save the plot in
+    normalize: A boolean indicating whether to normalize the data first
+
+    Returns
+    -------
+    A string representing the location on disk for the image location
+    """
+
+    if normalize:
+        data_set_counter = normalize_dict(Counter(data_set))
+    else:
+        data_set_counter = Counter(data_set)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+
+    x_index = np.arange(len(data_set_counter.keys()))
+
+    labels = []
+    values = []
+    for key in data_set_counter.keys():
+        labels.append(key)
+        values.append(data_set_counter[key])
+
+    ax.bar(x_index, values)
+    # Plotting
+
+    if normalize:
+        ax.set_title(f"Normalized Bar Chart for {feature_name}")
+        ax.set_ylabel("Percentage", fontsize=14)
+    else:
+        ax.set_title(f"Bar Chart for {feature_name}")
+        ax.set_ylabel("Occurrences", fontsize=14)
+
+    ax.set_xlabel("Value", fontsize=14)
+
+    ax.set_xticks(x_index)
+    ax.set_xticklabels(labels)
+
+    # Finding the best position for legends and putting it
+    ax.legend(loc='best', fontsize=12)
+
+    # save the plot
+    now = datetime.now()
+    # use the date hash as the file name
+    date_hash = hashlib.md5(str(now).encode())
+    image_name = date_hash.hexdigest()
+
+    full_name = f"{report_location}images/{image_name}.png"
+    plt.savefig(full_name)
+    plt.close(fig)
+    return f"./images/{image_name}.png"
+
+
+def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, normalize=False):
     """
     Creates a side by side bar plot for the feature from the two datasets. It expects the datasets to have been passed
     through get_dataset_metrics prior to use.
@@ -264,7 +326,6 @@ def create_bar_plot(train_set, test_set, feature_name, report_location, normaliz
     return f"./images/{image_name}.png"
 
 
-## TODO refactor to make a little more general and be used for evaluations too
 class Report:
     def __init__(self):
         self.introduction = None
@@ -275,12 +336,20 @@ class Report:
         self.hyper_parameters = dict()
         self.dataset_value_parser = dataset_value_parser
         self.ignore_list = []
+        self.evaluation_metrics = []
+        self.evaluation_metric_scalars = []
 
     def set_introduction(self, introduction):
         self.introduction = introduction
 
     def add_metric(self, metrics):
         self.metrics.append(metrics)
+
+    def add_evaluatation_metric(self, metric):
+        self.evaluation_metrics.append(metric)
+
+    def add_evaluatation_metric_scalar(self, metric):
+        self.evaluation_metric_scalars.append(metric)
 
     def add_hyperparameter(self, param):
         self.hyper_parameters.update(param)
@@ -307,7 +376,7 @@ class Report:
     def set_ignore_list(self, ignore_list):
         self.ignore_list = ignore_list
 
-    def make_dataset_section(self):
+    def make_datasets_section(self):
         heading = "# Datasets \n"
 
         training_heading = "### Training Set \n"
@@ -328,10 +397,24 @@ class Report:
                                         dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
         for key in list(train_dict.keys()) + list(test_dict.keys()):
-            comparisons += f"![image]({create_bar_plot(train_dict[key], test_dict[key], key, self.write_directory)})\n"
-            comparisons += f"![image]({create_bar_plot(train_dict[key], test_dict[key], key, self.write_directory, normalize=True)})\n "
+            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], test_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
+            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], test_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=True)})\n"
 
         return heading + training_heading + training_desc + test_heading + test_desc + comparison_heading + comparison_desc + comparisons
+
+    def make_evaluation_dataset_section(self):
+        heading = "# Validation Dataset \n"
+
+        test_desc = f"The validation dataset located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n"
+
+        test_dict = get_dataset_metrics(self.test_set, ignore_list=self.ignore_list,
+                                        dataset_value_parser_fn=self.dataset_value_parser)
+        comparisons = ""
+
+        for key in list(test_dict.keys()):
+            comparisons += f"![image]({create_bar_plot(data_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
+
+        return heading + test_desc + comparisons
 
     def make_examples_section(self):
 
@@ -357,10 +440,18 @@ class Report:
         return heading + section_desc + parameters
 
     def make_metrics_section(self):
-        metrics_str = "# Peformance\n"
+        metrics_str = "# Performance\n"
         # blurb for section details
         for metric in self.metrics:
             metrics_str += f"![image]({metric.create_plot(self.write_directory)})\n"
+
+        return metrics_str
+
+    def make_evaluation_section(self):
+        metrics_str = "# Performance\n"
+        # blurb for section details
+        for evaluation_metric in self.evaluation_metrics:
+            metrics_str += f"![image]({evaluation_metric.create_plot(self.write_directory)})\n"
 
         return metrics_str
 
@@ -369,8 +460,13 @@ class Report:
             report_out.write(self.make_introduction_section())
             report_out.write(self.make_hyperparameters_section())
             report_out.write(self.make_metrics_section())
-            report_out.write(self.make_dataset_section())
+            report_out.write(self.make_datasets_section())
             report_out.write(self.make_examples_section())
+
+    def write_evaluation_report(self, name):
+        with open(f"{self.write_directory}/{name}.md", "w") as report_out:
+            report_out.write(self.make_evaluation_section())
+            report_out.write(self.make_evaluation_dataset_section())
 
 
 def cli_main(flags):

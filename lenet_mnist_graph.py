@@ -235,7 +235,6 @@ class MNISTModel(object):
     def _build_mnist_model(self):
 
         self.image_input = tf.compat.v1.placeholder(tf.float32, shape=[None, 784], name="X")
-
         self.actual_label = tf.compat.v1.placeholder(tf.float32, shape=[None, 10], name="y_true")
 
         x_image = tf.reshape(self.image_input, [-1, 28, 28, 1])
