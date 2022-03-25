@@ -34,7 +34,7 @@ class EvaluationMetric:
     def create_plot(self, report_location):
         fig, ax = plt.subplots(figsize=(10, 5))
 
-        ax.plot(self.horizonal_values, self.vertical_values)
+        ax.plot(self.horizonal_values, self.vertical_values, 'rs')
 
         ax.set_title(self.title)
         ax.set_xlabel(self.x, fontsize=14)
