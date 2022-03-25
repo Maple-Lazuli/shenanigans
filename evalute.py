@@ -111,7 +111,7 @@ if __name__ == '__main__':
     for label in range(0, 10):
         roc_dict[label] = EvaluationMetric(f"ROC For Class {label}", "False Positive Rate", "True Positive Rate")
 
-    for threshold in np.linspace(0, 1, num=100):
+    for threshold in np.linspace(0.0, 1.0, num=1000):
         # a confusion dictionary to hold the counts from the confusion matrix
         confusion_dict = {}
         for class_pred in range(0, 10):
