@@ -208,21 +208,21 @@ class MNISTModel(object):
                     batch_match_list = []
                     while True:
                         features = self.sess.run(self.next_valid)
-                        test_x = features['input']
-                        test_y = features['label']
+                        validate_x = features['input']
+                        validate_y = features['label']
                         # Find occurrences where there are matches
                         matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
                                                      tf.compat.v1.argmax(input=self.actual_label, axis=1))
                         # Find the number of correct predictions
                         acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
                         # add the number of correct predictions to the running sum
-                        score = self.sess.run(acc, feed_dict={self.image_input: test_x,
-                                                                     self.actual_label: test_y,
+                        score = self.sess.run(acc, feed_dict={self.image_input: validate_x,
+                                                                     self.actual_label: validate_y,
                                                                      self.hold_prob: 1.0})
                         batch_match_list.append(score)
                 except tf.errors.OutOfRangeError:
-                    epoch_mse_metric.add("test_loss", calculate_mse(batch_match_list))
-                    epoch_mae_metric.add("test_loss", calculate_mae(batch_match_list))
+                    epoch_mse_metric.add("validation_loss", calculate_mse(batch_match_list))
+                    epoch_mae_metric.add("validation_loss", calculate_mae(batch_match_list))
         if save:
             saver.save(self.sess, save_location)
 
@@ -279,21 +279,21 @@ class MNISTModel(object):
 
 def cli_main(flags):
     train_records = flags.train_set
-    test_records = flags.test_set
+    validation_records = flags.validation_set
 
     train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
-    test_df = DatasetGenerator(test_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
+    validation_df = DatasetGenerator(validation_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
 
     reporter = None
     if flags.report:
         reporter = Report()
         reporter.set_train_set(train_df)
-        reporter.set_test_set(test_df)
+        reporter.set_validation_set(validation_df)
         reporter.set_write_directory(flags.report_dir)
 
     with tf.compat.v1.Session() as sess:
         # sess.run # i dont remember why this is here
-        model = MNISTModel(sess, train_df, test_df, learning_rate=flags.learning_rate, reporter=reporter)
+        model = MNISTModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
 
     if flags.report:
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', type=int,
-                        default=1,
+                        default=30,
                         help='The number of epochs for training')
 
     parser.add_argument('--learning_rate', type=int,
@@ -327,12 +327,12 @@ if __name__ == "__main__":
                         default="./mnist_tf/train/mnist_train.tfrecords",
                         help='the location of the training set')
 
-    parser.add_argument('--test_set', type=str,
-                        default="./mnist_tf/test/mnist_test.tfrecords",
-                        help='the location of the test set')
+    parser.add_argument('--validation_set', type=str,
+                        default="./mnist_tf/valid/mnist_valid.tfrecords",
+                        help='the location of the validation set')
 
     parser.add_argument('--report', type=bool,
-                        default=False,
+                        default=True,
                         help='Whether to create a report.')
 
     parser.add_argument('--report_dir', type=str,

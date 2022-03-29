@@ -53,15 +53,14 @@ def create_tfrecords(data_dir,
 
 
 def main_cli(flags):
-    split_dict = {"train": 0.8, "valid": 0.1, "test": 0.1}
+    split_dict = {"train": 0.7, "valid": 0.2, "test": 0.1}
 
-    #TODO change to dataset name
-    if flags.parser == "satsim":
+    if flags.dataset == "satsim":
         partition_fn = sim.partition_examples
         build_tf_dataset = sim.build_tf_dataset
         build_tf_example = sim.build_tf_example
 
-    elif flags.parser == "mnist":
+    elif flags.dataset == "mnist":
         partition_fn = mnist.partition_examples
         build_tf_dataset = mnist.build_tf_dataset
         build_tf_example = mnist.build_tf_example
@@ -93,7 +92,7 @@ if __name__ == '__main__':
                         default="./generated_data_tfrecords",
                         help='Path to the output directory.')
 
-    parser.add_argument('--parser', type=str,
+    parser.add_argument('--dataset', type=str,
                         default="satsim",
                         help='Path to the output directory.')
 

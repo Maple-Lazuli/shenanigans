@@ -49,7 +49,7 @@ if __name__ == '__main__':
         print("Done")
 
     reporter = Report()
-    reporter.set_test_set(valid_df)
+    reporter.set_validation_set(valid_df)
     reporter.set_confusion_matrix(confusion_matrix)
     reporter.set_dataset_value_parser(dataset_value_parser)
     reporter.set_ignore_list(['input', 'depth'])

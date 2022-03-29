@@ -255,7 +255,7 @@ def create_bar_plot(data_set, feature_name, report_location, normalize=False):
     return f"./images/{image_name}.png"
 
 
-def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, normalize=False):
+def create_bar_plot_pairs(train_set, validation_set, feature_name, report_location, normalize=False):
     """
     Creates a side by side bar plot for the feature from the two datasets. It expects the datasets to have been passed
     through get_dataset_metrics prior to use.
@@ -263,7 +263,7 @@ def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, no
     Parameters
     ----------
     train_set: The first dataset dictionary
-    test_set: The second dataset dictionary
+    validation_set: The second dataset dictionary
     feature_name: The feature to create a bar plot for
     report_location: the location to save the plot in
     normalize: A boolean indicating whether to normalize the data first
@@ -274,19 +274,19 @@ def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, no
     """
     if normalize:
         train_counter = normalize_dict(Counter(train_set))
-        test_counter = normalize_dict(Counter(test_set))
+        validation_counter = normalize_dict(Counter(validation_set))
     else:
         train_counter = Counter(train_set)
-        test_counter = Counter(test_set)
+        validation_counter = Counter(validation_set)
 
     keys = set()
     [keys.add(key) for key in train_counter.keys()]
-    [keys.add(key) for key in test_counter.keys()]
+    [keys.add(key) for key in validation_counter.keys()]
 
     N = len(keys)
 
     train_values = []
-    test_values = []
+    validation_values = []
 
     for key in keys:
         if key not in train_counter.keys():
@@ -294,10 +294,10 @@ def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, no
         else:
             train_values.append(train_counter[key])
 
-        if key not in test_counter.keys():
-            test_values.append(0)
+        if key not in validation_counter.keys():
+            validation_values.append(0)
         else:
-            test_values.append(test_counter[key])
+            validation_values.append(validation_counter[key])
 
     # Position of bars on x-axis
     ind = np.arange(N)
@@ -307,7 +307,7 @@ def create_bar_plot_pairs(train_set, test_set, feature_name, report_location, no
     fig, ax = plt.subplots(figsize=(10, 5))
 
     ax.bar(ind, train_values, width, label='Train Set')
-    ax.bar(ind + width, test_values, width, label='Test Set')
+    ax.bar(ind + width, validation_values, width, label='Validation Set')
     # Plotting
 
     if normalize:
@@ -341,7 +341,7 @@ class Report:
     def __init__(self):
         self.introduction = None
         self.metrics = []
-        self.test_set = None
+        self.validation_set = None
         self.train_set = None
         self.write_directory = None
         self.confusion_matrix = None
@@ -366,8 +366,8 @@ class Report:
     def add_hyperparameter(self, param):
         self.hyper_parameters.update(param)
 
-    def set_test_set(self, test_set):
-        self.test_set = test_set
+    def set_validation_set(self, validation_set):
+        self.validation_set = validation_set
 
     def set_train_set(self, train_set):
         self.train_set = train_set
@@ -396,33 +396,33 @@ class Report:
 
         training_heading = "### Training Set \n"
 
-        training_desc = f"The training set located at {self.train_set.get_location()} consists of {self.train_set.get_size()}, served in batch sizes of {self.train_set.get_batch_size()}.\n"
+        training_desc = f"The training set located at {self.train_set.get_location()} consists of {self.train_set.get_size()}, served in batch sizes of {self.train_set.get_batch_size()}.\n\n"
 
-        test_heading = "### Testing Set \n"
+        validation_heading = "### Validation Set \n"
 
-        test_desc = f"The testing set located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n"
+        validation_desc = f"The validation set located at {self.validation_set.get_location()} consists of {self.validation_set.get_size()}, served in batch sizes of {self.validation_set.get_batch_size()}.\n\n"
 
-        comparison_heading = "### Test Set / Training Set Comparison \n"
+        comparison_heading = "### Validation Set and Training Set Comparison \n"
 
-        comparison_desc = "This section compares the contents of the test and train sets used.\n"
+        comparison_desc = "This section compares the contents of the validation and train sets used.\n"
 
         train_dict = get_dataset_metrics(self.train_set, ignore_list=self.ignore_list,
                                          dataset_value_parser_fn=self.dataset_value_parser)
-        test_dict = get_dataset_metrics(self.test_set, ignore_list=self.ignore_list,
+        validation_dict = get_dataset_metrics(self.validation_set, ignore_list=self.ignore_list,
                                         dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
-        for key in list(train_dict.keys()) + list(test_dict.keys()):
-            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], test_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
-            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], test_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=True)})\n"
+        for key in list(train_dict.keys()) + list(validation_dict.keys()):
+            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], validation_set=validation_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
+            comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], validation_set=validation_dict[key], feature_name=key, report_location=self.write_directory, normalize=True)})\n"
 
-        return heading + training_heading + training_desc + test_heading + test_desc + comparison_heading + comparison_desc + comparisons
+        return heading + training_heading + training_desc + validation_heading + validation_desc + comparison_heading + comparison_desc + comparisons
 
     def make_evaluation_dataset_section(self):
         heading = "# Validation Dataset \n"
 
-        validation_desc = f"The validation dataset located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n The charts below depict the distribution of the features of this dataset"
+        validation_desc = f"The validation dataset located at {self.validation_set.get_location()} consists of {self.validation_set.get_size()}, served in batch sizes of {self.validation_set.get_batch_size()}.\n The charts below depict the distribution of the features of this dataset"
 
-        validation_dict = get_dataset_metrics(self.test_set, ignore_list=self.ignore_list,
+        validation_dict = get_dataset_metrics(self.validation_set, ignore_list=self.ignore_list,
                                         dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
 
