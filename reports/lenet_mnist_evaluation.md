@@ -1,16 +1,11 @@
-# Performance
-![image](images/6fdddb6bdb09dcb28c05ace15b15920e.png)
-![image](images/8b420b641d88a9aa9dc9861010e311d4.png)
-![image](images/705b07358416e27cf098f4ae8cff238f.png)
-![image](images/c9ef5293940f9fe798de217aa34626ad.png)
-![image](images/0b2ec6226528ff4b4070b0281aecef70.png)
-![image](images/3ed16089398db20831348e55a8e405e8.png)
-![image](images/1f9d3967c5fbdc6ae3dca88ebbf55890.png)
-![image](images/742a36bfd592af2027ba0b1d9ee1d0e9.png)
-![image](images/f7ae898061d71691b54caf93607da7da.png)
-![image](images/4476a09300e989286ff07af2c9caf69a.png)
+# Confusion Matrix
+ The multi-class confusion matrix captures the true labels along the columns and the predicted labels along the rows. The cells contain counts for the intersection of true labels and predicted labels. 
+![image](images/a00d8c576f26365a1dfdf301e91ca47f.png)
+# Score Matrix 
+The score matrix contains the true positives, the true negatives, the false positives, the false negatives, the precision, the recall, the specificity, the misclassification rate, accuracy, and the f1 score for each labelthe classifier is trained on. 
+![image](images/d36a9ee8b93b14d6fd635305e729d48b.png)
 # Validation Dataset 
-The validation dataset located at ./mnist_tf/test/mnist_test.tfrecords consists of 7000, served in batch sizes of 1.
-![image](./images/6a9158d6152fc117000e2628c2e6f491.png)
-![image](./images/7b2515757d10ac8838b95e3f7f361668.png)
-![image](./images/d057c721273d411b376d7eed280b5dae.png)
+The validation dataset located at ./mnist_tf/valid/mnist_valid.tfrecords consists of 7000, served in batch sizes of 1.
+ The charts below depict the distribution of the features of this dataset![image](./images/c1ba55fa8fccb3117b4d525ffb73eb07.png)
+![image](./images/7d7e0d82f8bd1f0ebfbe2576fa76af12.png)
+![image](./images/f6f61431a5e348be5d94ddebbb51815d.png)

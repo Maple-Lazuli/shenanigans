@@ -6,10 +6,21 @@ import hashlib
 from collections import Counter
 import argparse
 import os
+from multiclass_confusion_matrix import create_measure_matrix
+import dataframe_image as dfi
 
 """
 Writes either a training report or a evaluation report. It creates plots showing the datasets, examples, and metrics
 """
+
+
+def create_image_from_matrix(matrix, write_directory):
+    date_hash = hashlib.md5(str(datetime.now()).encode())
+    image_name = date_hash.hexdigest()
+    full_name = f"{write_directory}images/{image_name}.png"
+    dfi.export(matrix, full_name)
+    return f"images/{image_name}.png"
+
 
 
 def get_dataset_report_examples(dataset, label_key):
@@ -333,6 +344,7 @@ class Report:
         self.test_set = None
         self.train_set = None
         self.write_directory = None
+        self.confusion_matrix = None
         self.hyper_parameters = dict()
         self.dataset_value_parser = dataset_value_parser
         self.ignore_list = []
@@ -359,6 +371,9 @@ class Report:
 
     def set_train_set(self, train_set):
         self.train_set = train_set
+
+    def set_confusion_matrix(self, confusion_matrix):
+        self.confusion_matrix = confusion_matrix
 
     def set_write_directory(self, directory):
         self.write_directory = directory
@@ -405,19 +420,18 @@ class Report:
     def make_evaluation_dataset_section(self):
         heading = "# Validation Dataset \n"
 
-        test_desc = f"The validation dataset located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n"
+        validation_desc = f"The validation dataset located at {self.test_set.get_location()} consists of {self.test_set.get_size()}, served in batch sizes of {self.test_set.get_batch_size()}.\n The charts below depict the distribution of the features of this dataset"
 
-        test_dict = get_dataset_metrics(self.test_set, ignore_list=self.ignore_list,
+        validation_dict = get_dataset_metrics(self.test_set, ignore_list=self.ignore_list,
                                         dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
 
-        for key in list(test_dict.keys()):
-            comparisons += f"![image]({create_bar_plot(data_set=test_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
+        for key in list(validation_dict.keys()):
+            comparisons += f"![image]({create_bar_plot(data_set=validation_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
 
-        return heading + test_desc + comparisons
+        return heading + validation_desc + comparisons
 
     def make_examples_section(self):
-
         heading = "# Dataset Examples\n"
 
         section_desc = "This section depicts one input for each label the model is expected to learn.\n"
@@ -452,8 +466,25 @@ class Report:
         # blurb for section details
         for evaluation_metric in self.evaluation_metrics:
             metrics_str += f"![image]({evaluation_metric.create_plot(self.write_directory)})\n"
-
         return metrics_str
+
+    def make_matrix_section(self):
+
+        confusion_heading_str = "# Confusion Matrix\n"
+
+        confusion_desc = "The multi-class confusion matrix captures the true labels along the columns and the predicted labels along the rows. The cells contain counts for the intersection of true labels and predicted labels. \n"
+
+        confusion_matrix_image = f"![image]({create_image_from_matrix(self.confusion_matrix, self.write_directory)})\n"
+
+        score_heading = "# Score Matrix \n"
+
+        score_matrix = create_measure_matrix(self.confusion_matrix)
+
+        score_matrix_desc = "The score matrix contains the true positives, the true negatives, the false positives, the false negatives, the precision, the recall, the specificity, the misclassification rate, accuracy, and the f1 score for each labelthe classifier is trained on. \n"
+
+        score_matrix_image = f"![image]({create_image_from_matrix(score_matrix, self.write_directory)})\n"
+
+        return confusion_heading_str + confusion_desc + confusion_matrix_image + score_heading + score_matrix_desc + score_matrix_image
 
     def write_report(self, name):
         with open(f"{self.write_directory}/{name}.md", "w") as report_out:
@@ -465,7 +496,8 @@ class Report:
 
     def write_evaluation_report(self, name):
         with open(f"{self.write_directory}/{name}.md", "w") as report_out:
-            report_out.write(self.make_evaluation_section())
+            #report_out.write(self.make_evaluation_section())
+            report_out.write(self.make_matrix_section())
             report_out.write(self.make_evaluation_dataset_section())
 
 
