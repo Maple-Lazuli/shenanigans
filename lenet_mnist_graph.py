@@ -5,13 +5,15 @@ from dataset_generator import DatasetGenerator
 from make_report import Report
 from metrics import Metric
 import json
+
 tf.compat.v1.disable_eager_execution()
 
 
-def get_default_parameters():
-    with open('mnist_config.json') as json_file:
+def get_parameters(file_name):
+    with open(file_name) as json_file:
         parameters = json.load(json_file)
     return parameters
+
 
 def calculate_mse(scores):
     """
@@ -98,7 +100,7 @@ def parse_records(example_proto):
     return_features = {
         "height": height,
         "width": width,
-        "depth": depth,  # 16 bits per pixel for FITS images
+        "depth": depth,
         "label": label,
         "input": image
     }
@@ -172,9 +174,6 @@ class MNISTModel(object):
             self.reporter.set_introduction(self.desc)
             self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
             self.reporter.set_dataset_value_parser(dataset_value_parser)
-            # The ignore list details features not to compare between the datsets.
-            # Input is in the list because each is approximately unique and depth is a constant
-            self.reporter.set_ignore_list(ignore_list)
 
     def train(self, epochs, save, save_location=None):
         init = tf.compat.v1.global_variables_initializer()
@@ -191,16 +190,15 @@ class MNISTModel(object):
                 self.sess.run(self.train_iterator.initializer)
                 batch_match_list = []
                 while True:
-
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
 
-                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy ,self.minimize,
-                                                         self.batch_accuracy],
-                                                        feed_dict={self.image_input: batch_x,
-                                                                   self.actual_label: batch_y,
-                                                                   self.hold_prob: 0.5})
+                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy, self.minimize,
+                                                               self.batch_accuracy],
+                                                              feed_dict={self.image_input: batch_x,
+                                                                         self.actual_label: batch_y,
+                                                                         self.hold_prob: 0.5})
 
                     loss_metric.add("loss", loss)
                     batch_match_list.append(batch_accuracy)
@@ -222,8 +220,8 @@ class MNISTModel(object):
                         acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
                         # add the number of correct predictions to the running sum
                         score = self.sess.run(acc, feed_dict={self.image_input: validate_x,
-                                                                     self.actual_label: validate_y,
-                                                                     self.hold_prob: 1.0})
+                                                              self.actual_label: validate_y,
+                                                              self.hold_prob: 1.0})
                         batch_match_list.append(score)
                 except tf.errors.OutOfRangeError:
                     epoch_mse_metric.add("validation_loss", calculate_mse(batch_match_list))
@@ -282,59 +280,50 @@ class MNISTModel(object):
             # find the number of correct predictions
             self.batch_accuracy = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
 
+
 def cli_main(flags):
-    train_records = flags.train_set
-    validation_records = flags.validation_set
+    config_dict = get_parameters(flags.config_json)
 
-    train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
-    validation_df = DatasetGenerator(validation_records, parse_function=parse_records, shuffle=True, batch_size=flags.batch_size)
+    train_records = config_dict['train_set_location']
+    validation_records = config_dict['validation_set_location']
 
-    reporter = None
-    if flags.report:
-        reporter = Report()
-        reporter.set_train_set(train_df)
-        reporter.set_validation_set(validation_df)
-        reporter.set_write_directory(flags.report_dir)
+    train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
+                                batch_size=flags.batch_size)
+    validation_df = DatasetGenerator(validation_records, parse_function=parse_satsim_record, shuffle=True,
+                                     batch_size=flags.batch_size)
+
+    reporter = Report()
+    reporter.set_train_set(train_df)
+    reporter.set_validation_set(validation_df)
+    reporter.set_write_directory(flags.report_dir)
+    reporter.set_ignore_list(config_dict['idgnore_list'])
 
     with tf.compat.v1.Session() as sess:
         # sess.run # i dont remember why this is here
         model = MNISTModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
 
-    if flags.report:
-        reporter.write_report('lenet_mnist_train')
+    reporter.write_report(flags.report_name)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', type=int,
-                        default=30,
+                        default=1,
                         help='The number of epochs for training')
 
     parser.add_argument('--learning_rate', type=int,
                         default=0.001,
                         help='The learning rate to use during training')
 
+    parser.add_argument('--config_json', type=str,
+                        default='./mnist_config.json',
+                        help="The config json file containing the parameters for the model")
+
     parser.add_argument('--save', type=bool,
                         default=True,
                         help='Whether or not to save the model')
-
-    parser.add_argument('--save_location', type=str,
-                        default="./mnist_model/mnist",
-                        help='The location to save the model in')
-
-    parser.add_argument('--batch_size', type=int,
-                        default=50,
-                        help='the number of images to train on at once')
-
-    parser.add_argument('--train_set', type=str,
-                        default="./mnist_tf/train/mnist_train.tfrecords",
-                        help='the location of the training set')
-
-    parser.add_argument('--validation_set', type=str,
-                        default="./mnist_tf/valid/mnist_valid.tfrecords",
-                        help='the location of the validation set')
 
     parser.add_argument('--report', type=bool,
                         default=True,

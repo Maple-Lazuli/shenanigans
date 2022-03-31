@@ -6,19 +6,18 @@ import hashlib
 from collections import Counter
 import argparse
 import os
-from multiclass_confusion_matrix import create_measure_matrix
 import dataframe_image as dfi
-
+import evaluation_utils as eu
 """
 Writes either a training report or a evaluation report. It creates plots showing the datasets, examples, and metrics
 """
 
 
-def create_roc_plot(tpr, fpr, label, write_dir):
+def create_roc_plot(tpr, fpr, label_name, write_dir):
     fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(fpr, tpr, label=f'label: {label}')
+    ax.plot(fpr, tpr, label=f'label: {label_name}')
 
-    ax.set_title(f"ROC Curve For {label} Against Validation Set")
+    ax.set_title(f"ROC Curve For {label_name} Against Validation Set")
     ax.set_xlabel('False Positive Rate', fontsize=14)
     ax.set_ylabel('True Positive Rate', fontsize=14)
     ax.legend(loc='best', fontsize=12)
@@ -371,6 +370,7 @@ def create_bar_plot_pairs(train_set, validation_set, feature_name, report_locati
 
 class Report:
     def __init__(self):
+        self.label_map_fn = None
         self.introduction = None
         self.metrics = []
         self.validation_set = None
@@ -425,6 +425,9 @@ class Report:
 
     def set_ignore_list(self, ignore_list):
         self.ignore_list = ignore_list
+
+    def set_label_map_fn(self, label_map_fn):
+        self.label_map_fn = label_map_fn
 
     def make_datasets_section(self):
         heading = "# Datasets \n"
@@ -506,7 +509,7 @@ class Report:
 
         score_heading = "# Score Matrix \n"
 
-        score_matrix = create_measure_matrix(self.confusion_matrix)
+        score_matrix = eu.create_measure_matrix(self.confusion_matrix)
 
         score_matrix_desc = "The score matrix contains the true positives, the true negatives, the false positives, the false negatives, the precision, the recall, the specificity, the misclassification rate, accuracy, and the f1 score for each labelthe classifier is trained on. \n"
 
@@ -525,7 +528,8 @@ class Report:
         for key in self.roc_dict.keys():
             tpr = self.roc_dict[key]['tp_rates']
             fpr = self.roc_dict[key]['fp_rates']
-            roc_images_str += f"![image]({create_roc_plot(tpr, fpr, key, self.write_directory)})\n"
+            label_name = self.label_map_fn(key)
+            roc_images_str += f"![image]({create_roc_plot(tpr, fpr, label_name, self.write_directory)})\n"
 
         return heading + desc + roc_images_str
 

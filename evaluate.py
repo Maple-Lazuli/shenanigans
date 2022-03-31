@@ -5,7 +5,9 @@ from dataset_generator import DatasetGenerator
 import argparse
 import json
 import lenet_mnist_graph as mnist
+import make_tfrecords_mnist as mnist_records
 import lenet_satsim_graph as satsim
+import make_tfrecords_satsim as satsim_records
 from datetime import datetime
 from make_report import Report
 
@@ -38,13 +40,14 @@ def cli_main(flags):
     softmax_classifier = tf.compat.v1.math.softmax(classifier_label)
     hold_prob = graph.get_tensor_by_name(config_dict['hold_prob_name'])
 
-    if flags.parser == "mnist":
+    if config_dict['graph_name'] == "mnist":
         parse_fn = mnist.parse_records
         reporter.set_dataset_value_parser(mnist.dataset_value_parser)
-    elif flags.parser == 'satsim':
+        reporter.set_label_map_fn(mnist_records.map_label_to_name)
+    elif config_dict['graph_name'] == 'satsim':
         parse_fn = satsim.parse_satsim_record
         reporter.set_dataset_value_parser(satsim.dataset_value_parser)
-
+        reporter.set_label_map_fn(satsim_records.map_label_to_name)
 
     valid_df = DatasetGenerator(config_dict['validation_set_location'], parse_function=parse_fn, shuffle=True,
                                 batch_size=1)
@@ -99,10 +102,6 @@ if __name__ == '__main__':
     parser.add_argument('--config_json', type=str,
                         default='./mnist_config.json',
                         help="The config json file containing the parameters for the model")
-
-    parser.add_argument('--parser', type=str,
-                        default='mnist',
-                        help='The name of the graph to use the tf record parser from.')
 
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',

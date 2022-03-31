@@ -6,6 +6,19 @@ import random
 import astropy.io.fits
 
 
+def map_label_to_name(label):
+    if label == 0:
+        return "Nominal"
+    elif label == 1:
+        return "Collision High"
+    elif label == 2:
+        return "Collision Low"
+    elif label == 3:
+        return "RPO"
+    elif label == 4:
+        return "Breakup"
+
+
 def get_labels(path):
     """
     The generated data stores the labels for the images in the directory structure and the purpose of this function is

@@ -4,8 +4,16 @@ import argparse
 from dataset_generator import DatasetGenerator
 from make_report import Report
 from metrics import Metric
+import json
+from datetime import datetime
 
 tf.compat.v1.disable_eager_execution()
+
+
+def get_parameters(file_name):
+    with open(file_name) as json_file:
+        parameters = json.load(json_file)
+    return parameters
 
 
 def calculate_mse(scores):
@@ -180,9 +188,7 @@ class SatSimModel(object):
             self.reporter.set_introduction(self.desc)
             self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
             self.reporter.set_dataset_value_parser(dataset_value_parser)
-            # The ignore list details features not to compare between the datsets.
-            # Input is in the list because each is approximately unique and depth is a constant
-            self.reporter.set_ignore_list(['input', 'depth'])
+
 
     def train(self, epochs, save=False, save_location=None):
 
@@ -292,27 +298,28 @@ class SatSimModel(object):
 
 
 def cli_main(flags):
-    train_records = flags.train_set
-    test_records = flags.test_set
+    config_dict = get_parameters(flags.config_json)
+
+    train_records = config_dict['train_set_location']
+    validation_records = config_dict['validation_set_location']
 
     train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
                                 batch_size=flags.batch_size)
-    test_df = DatasetGenerator(test_records, parse_function=parse_satsim_record, shuffle=True,
-                               batch_size=flags.batch_size)
+    validation_df = DatasetGenerator(validation_records, parse_function=parse_satsim_record, shuffle=True,
+                                     batch_size=flags.batch_size)
 
-    if flags.report:
-        reporter = Report()
-        reporter.set_train_set(train_df)
-        reporter.set_test_set(test_df)
-        reporter.set_write_directory(flags.report_dir)
+    reporter = Report()
+    reporter.set_train_set(train_df)
+    reporter.set_test_set(validation_df)
+    reporter.set_write_directory(flags.report_dir)
+    reporter.set_ignore_list(config_dict['idgnore_list'])
 
     with tf.compat.v1.Session() as sess:
         sess.run
-        model = SatSimModel(sess, train_df, test_df, learning_rate=flags.learning_rate, reporter=reporter)
-        model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
+        model = SatSimModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
+        model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['checkpoint_dir'])
 
-    if flags.report:
-        reporter.write_report('lenet_satsim')
+    reporter.write_report(flags.report_name)
 
 
 if __name__ == "__main__":
@@ -326,33 +333,25 @@ if __name__ == "__main__":
                         default=0.001,
                         help='The learning rate to use during training')
 
+    parser.add_argument('--config_json', type=str,
+                        default='./satsim_config.json',
+                        help="The config json file containing the parameters for the model")
+
     parser.add_argument('--save', type=bool,
-                        default=False,
+                        default=True,
                         help='Whether or not to save the model')
 
-    parser.add_argument('--save_location', type=str,
-                        default="./model/satsim",
-                        help='The location to save the model in')
-
-    parser.add_argument('--train_set', type=str,
-                        default="./generated_data_tfrecords/train/satsim_train.tfrecords",
-                        help='the location of the training set')
-
-    parser.add_argument('--test_set', type=str,
-                        default="./generated_data_tfrecords/test/satsim_test.tfrecords",
-                        help='the location of the test set')
-
-    parser.add_argument('--batch_size', type=int,
-                        default=50,
-                        help='the number of images to train on at once')
-
     parser.add_argument('--report', type=bool,
-                        default=False,
+                        default=True,
                         help='Whether to create a report.')
 
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
                         help='Where to save the reports.')
+
+    parser.add_argument('--report_name', type=str,
+                        default=f'{str(datetime.now())}',
+                        help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
 

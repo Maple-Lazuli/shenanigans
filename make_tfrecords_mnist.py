@@ -4,6 +4,10 @@ import random
 import os
 
 
+def map_label_to_name(label):
+    return str(label)
+
+
 def read_images(file_name):
     """
     Reads from the non_standard mnist dataset to extract images
@@ -115,7 +119,7 @@ def build_tf_dataset(directory):
             train_labels = read_labels(file)
 
     train_pairs = [(image, label) for image, label in zip(train_images, train_labels)]
-    test_pairs =  [(image, label) for image, label in zip(test_images, test_labels)]
+    test_pairs = [(image, label) for image, label in zip(test_images, test_labels)]
 
     # combine the two data sets to later split into train, test, validate sets
     return train_pairs + test_pairs

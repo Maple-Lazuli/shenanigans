@@ -1,9 +1,5 @@
 import pandas as pd
 import numpy as np
-import dataframe_image as dfi
-
-
-
 
 
 def calc_precision(tp, fp):
@@ -80,12 +76,54 @@ def confusion_matrix_calculations(matrix):
 def create_measure_matrix(confusion_matrix):
     scores = []
     for row in range(0, confusion_matrix.shape[0]):
-        scores.append(confusion_matrix_calculations(row, row, confusion_matrix))
+        scores.append(confusion_matrix_calculations_for_label(row, row, confusion_matrix))
 
     score_matrix = pd.DataFrame.from_dict(scores)
 
     return score_matrix
 
+def confusion_matrix_calculations_for_label(prediction_idx, true_idx, matrix):
+    # find the true positive
+    tp = matrix.iloc[prediction_idx, true_idx]
+
+    # find the true negative
+    tn = 0
+    for row in range(0, matrix.shape[0]):
+        if row == prediction_idx:
+            continue
+        for col in range(0, matrix.shape[1]):
+            if col == true_idx:
+                continue
+            tn += matrix.iloc[row, col]
+
+    # find the false positive
+    fp = 0
+    for col in range(0, matrix.shape[1]):
+        if col == true_idx:
+            continue
+        fp += matrix.iloc[prediction_idx, col]
+
+    fn = 0
+    for row in range(0, matrix.shape[0]):
+        if row == prediction_idx:
+            continue
+        fn += matrix.iloc[row, true_idx]
+
+    label_calculation_dict = {"label": prediction_idx,
+                              "true-pos": tp,
+                              "true-neg": tn,
+                              "false-pos": fp,
+                              "false-neg": fn,
+                              "precision": calc_precision(tp=tp, fp=fp),
+                              "recall": calc_recall(tp=tp, fn=fn),
+                              "specificity": calc_specificity(tn=tn, fp=fp),
+                              "misclassification rate": 1 - calc_specificity(tn=tn, fp=fp),
+                              "accuracy": calc_accuracy(tp=tp, tn=tn, fp=fp, fn=fn),
+                              "f1-score": calc_f1_score(tp=tp, fp=fp, fn=fn)
+
+                              }
+
+    return label_calculation_dict
 
 def expand_lists(x_list, y_list):
     x_expanded = [x_list[0]]

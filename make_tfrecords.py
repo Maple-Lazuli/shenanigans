@@ -4,6 +4,14 @@ import make_tfrecords_satsim as sim
 import make_tfrecords_mnist as mnist
 import os
 import shutil
+import json
+
+
+def get_parameters(file_name):
+    with open(file_name) as json_file:
+        parameters = json.load(json_file)
+    return parameters
+
 
 def make_clean_dir(directory):
     """
@@ -53,14 +61,15 @@ def create_tfrecords(data_dir,
 
 
 def main_cli(flags):
-    split_dict = {"train": 0.7, "valid": 0.2, "test": 0.1}
 
-    if flags.dataset == "satsim":
+    config_dict = get_parameters(flags.config_name)
+
+    if config_dict['graph_name'] == "satsim":
         partition_fn = sim.partition_examples
         build_tf_dataset = sim.build_tf_dataset
         build_tf_example = sim.build_tf_example
 
-    elif flags.dataset == "mnist":
+    elif config_dict['graph_name'] == "mnist":
         partition_fn = mnist.partition_examples
         build_tf_dataset = mnist.build_tf_dataset
         build_tf_example = mnist.build_tf_example
@@ -68,33 +77,21 @@ def main_cli(flags):
     else:
         raise ValueError("Unknown Record Parser")
 
-    create_tfrecords(data_dir=flags.data_dir,
-                     output_dir=flags.output_dir,
-                     tfrecords_name=flags.name,
+    create_tfrecords(data_dir=config_dict['source_data_dir'] ,
+                     output_dir=config_dict['tf_record_output_dir'] ,
+                     tfrecords_name=config_dict['graph_name'],
                      datapath_to_examples_fn=build_tf_dataset,
                      tf_example_builder_fn=build_tf_example,
                      partition_examples_fn=partition_fn,
-                     splits_dict=split_dict)
+                     splits_dict=config_dict['split_dict'])
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--name', type=str,
-                        default="satsim",
-                        help='Name of the dataset to build.')
-
-    parser.add_argument('--data_dir', type=str,
-                        default="./generated_data",
-                        help='Path to raw data.')
-
-    parser.add_argument('--output_dir', type=str,
-                        default="./generated_data_tfrecords",
-                        help='Path to the output directory.')
-
-    parser.add_argument('--dataset', type=str,
-                        default="satsim",
-                        help='Path to the output directory.')
+    parser.add_argument('--config_json', type=str,
+                        default='./mnist_config.json',
+                        help="The config json file containing the parameters for the model")
 
     flags, unparsed = parser.parse_known_args()
 
