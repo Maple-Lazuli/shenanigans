@@ -5,6 +5,7 @@ from dataset_generator import DatasetGenerator
 from make_report import Report
 from metrics import Metric
 import json
+from datetime import datetime
 
 tf.compat.v1.disable_eager_execution()
 
@@ -186,6 +187,7 @@ class MNISTModel(object):
         epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
 
         for i in range(epochs):
+            print(f"Started Training Epoch {i}  at {str(datetime.now())}")
             try:
                 self.sess.run(self.train_iterator.initializer)
                 batch_match_list = []
@@ -213,6 +215,7 @@ class MNISTModel(object):
                         features = self.sess.run(self.next_valid)
                         validate_x = features['input']
                         validate_y = features['label']
+
                         # Find occurrences where there are matches
                         matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
                                                      tf.compat.v1.argmax(input=self.actual_label, axis=1))
@@ -283,26 +286,25 @@ class MNISTModel(object):
 
 def cli_main(flags):
     config_dict = get_parameters(flags.config_json)
-
     train_records = config_dict['train_set_location']
     validation_records = config_dict['validation_set_location']
+    train_df = DatasetGenerator(train_records, parse_function=parse_records, shuffle=True,
+                                batch_size=config_dict['train_batchsize'])
 
-    train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
-                                batch_size=flags.batch_size)
-    validation_df = DatasetGenerator(validation_records, parse_function=parse_satsim_record, shuffle=True,
-                                     batch_size=flags.batch_size)
+    validation_df = DatasetGenerator(validation_records, parse_function=parse_records, shuffle=True,
+                                     batch_size=config_dict['validate_batchsize'])
 
     reporter = Report()
     reporter.set_train_set(train_df)
     reporter.set_validation_set(validation_df)
     reporter.set_write_directory(flags.report_dir)
-    reporter.set_ignore_list(config_dict['idgnore_list'])
+    reporter.set_ignore_list(config_dict['ignore_list'])
 
     with tf.compat.v1.Session() as sess:
-        # sess.run # i dont remember why this is here
         model = MNISTModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
-        model.train(epochs=flags.epochs, save=flags.save, save_location=flags.save_location)
+        model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
 
+    print(f"writing report {flags.report_name}")
     reporter.write_report(flags.report_name)
 
 
@@ -332,6 +334,10 @@ if __name__ == "__main__":
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
                         help='Where to save the reports.')
+
+    parser.add_argument('--report_name', type=str,
+                        default=f'{str(datetime.now())}_lenet_mnist_train',
+                        help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
 

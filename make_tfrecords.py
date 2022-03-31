@@ -62,7 +62,7 @@ def create_tfrecords(data_dir,
 
 def main_cli(flags):
 
-    config_dict = get_parameters(flags.config_name)
+    config_dict = get_parameters(flags.config_json)
 
     if config_dict['graph_name'] == "satsim":
         partition_fn = sim.partition_examples

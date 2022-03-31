@@ -189,7 +189,6 @@ class SatSimModel(object):
             self.reporter.add_hyperparameter({'learning_rate': self.learning_rate})
             self.reporter.set_dataset_value_parser(dataset_value_parser)
 
-
     def train(self, epochs, save=False, save_location=None):
 
         init = tf.compat.v1.global_variables_initializer()
@@ -304,20 +303,20 @@ def cli_main(flags):
     validation_records = config_dict['validation_set_location']
 
     train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
-                                batch_size=flags.batch_size)
+                                batch_size=config_dict['train_batchsize'])
     validation_df = DatasetGenerator(validation_records, parse_function=parse_satsim_record, shuffle=True,
-                                     batch_size=flags.batch_size)
+                                     batch_size=config_dict['validate_batchsize'])
 
     reporter = Report()
     reporter.set_train_set(train_df)
     reporter.set_test_set(validation_df)
     reporter.set_write_directory(flags.report_dir)
-    reporter.set_ignore_list(config_dict['idgnore_list'])
+    reporter.set_ignore_list(config_dict['ignore_list'])
 
     with tf.compat.v1.Session() as sess:
         sess.run
         model = SatSimModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
-        model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['checkpoint_dir'])
+        model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
 
     reporter.write_report(flags.report_name)
 
@@ -350,7 +349,7 @@ if __name__ == "__main__":
                         help='Where to save the reports.')
 
     parser.add_argument('--report_name', type=str,
-                        default=f'{str(datetime.now())}',
+                        default=f'{str(datetime.now())}_lenet_satsim_train',
                         help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
