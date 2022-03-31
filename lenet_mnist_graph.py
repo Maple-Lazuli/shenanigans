@@ -191,7 +191,9 @@ class MNISTModel(object):
             try:
                 self.sess.run(self.train_iterator.initializer)
                 batch_match_list = []
+
                 while True:
+
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
@@ -204,7 +206,6 @@ class MNISTModel(object):
 
                     loss_metric.add("loss", loss)
                     batch_match_list.append(batch_accuracy)
-
             except tf.errors.OutOfRangeError:
                 epoch_mse_metric.add("training_loss", calculate_mse(batch_match_list))
                 epoch_mae_metric.add("training_loss", calculate_mae(batch_match_list))
@@ -304,8 +305,7 @@ def cli_main(flags):
         model = MNISTModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
 
-    print(f"writing report {flags.report_name}")
-    reporter.write_report(flags.report_name)
+    reporter.write_evaluation_report(f"{config_dict['report_name_base']}_train_{str(datetime.now())}")
 
 
 if __name__ == "__main__":
@@ -334,10 +334,6 @@ if __name__ == "__main__":
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
                         help='Where to save the reports.')
-
-    parser.add_argument('--report_name', type=str,
-                        default=f'{str(datetime.now())}_lenet_mnist_train',
-                        help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
 

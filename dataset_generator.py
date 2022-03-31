@@ -61,7 +61,7 @@ class DatasetGenerator(object):
         if batch_size > 0:
             data = data.batch(batch_size, drop_remainder=True)
 
-        data.prefetch(buffer_size=buffer)
+        #data.prefetch(buffer_size=buffer)
 
         return data
 

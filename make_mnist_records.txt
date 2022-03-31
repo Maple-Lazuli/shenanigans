@@ -1,1 +1,0 @@
-python make_tfrecords.py --name mnist --dataset mnist --data_dir ./mnist --output_dir ./mnist_ft

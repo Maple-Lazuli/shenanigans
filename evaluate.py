@@ -93,7 +93,7 @@ def cli_main(flags):
     reporter.set_confusion_matrix(confusion_matrix)
     reporter.set_roc_dict(roc_dict)
     reporter.set_write_directory(flags.report_dir)
-    reporter.write_evaluation_report(flags.report_name)
+    reporter.write_evaluation_report(f"{config_dict['report_name_base']}_evaluate_{str(datetime.now())}")
 
 
 if __name__ == '__main__':
@@ -106,10 +106,6 @@ if __name__ == '__main__':
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
                         help='Where to save the reports.')
-
-    parser.add_argument('--report_name', type=str,
-                        default=f'{str(datetime.now())}',
-                        help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
 

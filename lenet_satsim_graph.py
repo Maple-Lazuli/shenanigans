@@ -192,7 +192,7 @@ class SatSimModel(object):
     def train(self, epochs, save=False, save_location=None):
 
         init = tf.compat.v1.global_variables_initializer()
-        saver = tf.compat.v1.train.Saver(write_version=1)
+        saver = tf.compat.v1.train.Saver()
         self.sess.run(init)
 
         # Register metrics to go to the reporter
@@ -201,6 +201,7 @@ class SatSimModel(object):
         epoch_mae_metric = Metric(title="Mean Absolute Error", horizontal_label="Epochs", vertical_label="Error")
 
         for i in range(epochs):
+            print(f"Started Training Epoch {i}  at {str(datetime.now())}")
             try:
                 self.sess.run(self.train_iterator.initializer)
                 batch_match_list = []
@@ -309,16 +310,15 @@ def cli_main(flags):
 
     reporter = Report()
     reporter.set_train_set(train_df)
-    reporter.set_test_set(validation_df)
+    reporter.set_validation_set(validation_df)
     reporter.set_write_directory(flags.report_dir)
     reporter.set_ignore_list(config_dict['ignore_list'])
 
     with tf.compat.v1.Session() as sess:
-        sess.run
         model = SatSimModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
 
-    reporter.write_report(flags.report_name)
+    reporter.write_evaluation_report(f"{config_dict['report_name_base']}_train_{str(datetime.now())}")
 
 
 if __name__ == "__main__":
@@ -347,10 +347,6 @@ if __name__ == "__main__":
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
                         help='Where to save the reports.')
-
-    parser.add_argument('--report_name', type=str,
-                        default=f'{str(datetime.now())}_lenet_satsim_train',
-                        help='The name of the report.')
 
     parsed_flags, _ = parser.parse_known_args()
 
