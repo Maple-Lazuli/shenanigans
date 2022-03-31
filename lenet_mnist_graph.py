@@ -4,9 +4,14 @@ import argparse
 from dataset_generator import DatasetGenerator
 from make_report import Report
 from metrics import Metric
-
+import json
 tf.compat.v1.disable_eager_execution()
 
+
+def get_default_parameters():
+    with open('mnist_config.json') as json_file:
+        parameters = json.load(json_file)
+    return parameters
 
 def calculate_mse(scores):
     """
@@ -169,7 +174,7 @@ class MNISTModel(object):
             self.reporter.set_dataset_value_parser(dataset_value_parser)
             # The ignore list details features not to compare between the datsets.
             # Input is in the list because each is approximately unique and depth is a constant
-            self.reporter.set_ignore_list(['input', 'depth'])
+            self.reporter.set_ignore_list(ignore_list)
 
     def train(self, epochs, save, save_location=None):
         init = tf.compat.v1.global_variables_initializer()
