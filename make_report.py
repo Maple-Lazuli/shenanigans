@@ -14,13 +14,45 @@ Writes either a training report or a evaluation report. It creates plots showing
 """
 
 
+def create_roc_plot(tpr, fpr, label, write_dir):
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.plot(fpr, tpr, label=f'label: {label}')
+
+    ax.set_title(f"ROC Curve For {label} Against Validation Set")
+    ax.set_xlabel('False Positive Rate', fontsize=14)
+    ax.set_ylabel('True Positive Rate', fontsize=14)
+    ax.legend(loc='best', fontsize=12)
+
+    # Create the save file name
+    # use the current time as the seed
+    now = datetime.now()
+    # use the date hash as the file name
+    date_hash = hashlib.md5(str(now).encode())
+    image_name = date_hash.hexdigest()
+
+    full_name = f"{write_dir}images/{image_name}.png"
+    plt.savefig(full_name)
+    plt.close(fig)
+
+    return f"images/{image_name}.png"
+
 def create_image_from_matrix(matrix, write_directory):
+    """
+    Creates a PNG image from a pandas dataframe
+    Parameters
+    ----------
+    matrix: The pandas dataframe to create an image for
+    write_directory: The directory to write the image
+
+    Returns
+    -------
+    A string with the relative path to the image from the write directory2
+    """
     date_hash = hashlib.md5(str(datetime.now()).encode())
     image_name = date_hash.hexdigest()
     full_name = f"{write_directory}images/{image_name}.png"
     dfi.export(matrix, full_name)
     return f"images/{image_name}.png"
-
 
 
 def get_dataset_report_examples(dataset, label_key):
@@ -369,6 +401,9 @@ class Report:
     def set_validation_set(self, validation_set):
         self.validation_set = validation_set
 
+    def set_roc_dict(self, roc_dict):
+        self.roc_dict = roc_dict
+
     def set_train_set(self, train_set):
         self.train_set = train_set
 
@@ -409,7 +444,7 @@ class Report:
         train_dict = get_dataset_metrics(self.train_set, ignore_list=self.ignore_list,
                                          dataset_value_parser_fn=self.dataset_value_parser)
         validation_dict = get_dataset_metrics(self.validation_set, ignore_list=self.ignore_list,
-                                        dataset_value_parser_fn=self.dataset_value_parser)
+                                              dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
         for key in list(train_dict.keys()) + list(validation_dict.keys()):
             comparisons += f"![image]({create_bar_plot_pairs(train_set=train_dict[key], validation_set=validation_dict[key], feature_name=key, report_location=self.write_directory, normalize=False)})\n"
@@ -423,7 +458,7 @@ class Report:
         validation_desc = f"The validation dataset located at {self.validation_set.get_location()} consists of {self.validation_set.get_size()}, served in batch sizes of {self.validation_set.get_batch_size()}.\n The charts below depict the distribution of the features of this dataset"
 
         validation_dict = get_dataset_metrics(self.validation_set, ignore_list=self.ignore_list,
-                                        dataset_value_parser_fn=self.dataset_value_parser)
+                                              dataset_value_parser_fn=self.dataset_value_parser)
         comparisons = ""
 
         for key in list(validation_dict.keys()):
@@ -461,16 +496,9 @@ class Report:
 
         return metrics_str
 
-    def make_evaluation_section(self):
-        metrics_str = "# Performance\n"
-        # blurb for section details
-        for evaluation_metric in self.evaluation_metrics:
-            metrics_str += f"![image]({evaluation_metric.create_plot(self.write_directory)})\n"
-        return metrics_str
-
     def make_matrix_section(self):
 
-        confusion_heading_str = "# Confusion Matrix\n"
+        confusion_heading_str = "# Confusion Matrix Against Validation Set\n"
 
         confusion_desc = "The multi-class confusion matrix captures the true labels along the columns and the predicted labels along the rows. The cells contain counts for the intersection of true labels and predicted labels. \n"
 
@@ -486,6 +514,21 @@ class Report:
 
         return confusion_heading_str + confusion_desc + confusion_matrix_image + score_heading + score_matrix_desc + score_matrix_image
 
+    def make_roc_section(self):
+
+        heading = "# Multiclass Receiver Operating Characteristic (ROC) Curves \n"
+
+        desc = "The multiclass ROC curves were created using one-versus-rest classifications against the validation set.\n"
+
+        roc_images_str = ""
+
+        for key in self.roc_dict.keys():
+            tpr = self.roc_dict[key]['tp_rates']
+            fpr = self.roc_dict[key]['fp_rates']
+            roc_images_str += f"![image]({create_roc_plot(tpr, fpr, key, self.write_directory)})\n"
+
+        return heading + desc + roc_images_str
+
     def write_report(self, name):
         with open(f"{self.write_directory}/{name}.md", "w") as report_out:
             report_out.write(self.make_introduction_section())
@@ -496,8 +539,8 @@ class Report:
 
     def write_evaluation_report(self, name):
         with open(f"{self.write_directory}/{name}.md", "w") as report_out:
-            #report_out.write(self.make_evaluation_section())
             report_out.write(self.make_matrix_section())
+            report_out.write(self.make_roc_section())
             report_out.write(self.make_evaluation_dataset_section())
 
 

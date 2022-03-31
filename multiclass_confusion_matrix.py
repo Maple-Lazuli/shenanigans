@@ -60,6 +60,7 @@ def confusion_matrix_calculations(prediction_idx, true_idx, matrix):
                               "misclassification rate": 1 - calc_specificity(tn=tn, fp=fp),
                               "accuracy": calc_accuracy(tp=tp, tn=tn, fp=fp, fn=fn),
                               "f1-score": calc_f1_score(tp=tp, fp=fp, fn=fn)
+
                               }
 
     return label_calculation_dict
