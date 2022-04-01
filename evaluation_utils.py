@@ -3,11 +3,11 @@ import numpy as np
 
 
 def calc_precision(tp, fp):
-    return tp / (tp + fp)
+    return tp / (tp + fp) if tp != 0 else 0
 
 
 def calc_recall(tp, fn):
-    return tp / (tp + fn)
+    return tp / (tp + fn) if tp != 0 else 0
 
 
 def calc_specificity(tn, fp):
@@ -15,11 +15,11 @@ def calc_specificity(tn, fp):
 
 
 def calc_accuracy(tp, tn, fp, fn):
-    return (tp + tn) / (tp + tn + fp + fn)
+    return (tp + tn) / (tp + tn + fp + fn)  if tp != 0 or tn !=0  else 0
 
 
 def calc_f1_score(tp, fp, fn):
-    return (2 * tp) / (2 * tp + fp + fn)
+    return (2 * tp) / (2 * tp + fp + fn) if tp != 0 else 0
 
 
 def confusion_matrix_calculations(matrix):

@@ -305,7 +305,7 @@ def cli_main(flags):
         model = MNISTModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
         model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
 
-    reporter.write_evaluation_report(f"{config_dict['report_name_base']}_train_{str(datetime.now())}")
+    reporter.write_report(f"{config_dict['report_name_base']}_train_{str(datetime.now())}")
 
 
 if __name__ == "__main__":
