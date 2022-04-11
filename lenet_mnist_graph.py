@@ -229,11 +229,12 @@ class MNISTModel(object):
                     batch_x = features['input']
                     batch_y = features['label']
 
-                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy, self.minimize,
-                                                               self.batch_accuracy],
-                                                              feed_dict={self.image_input: batch_x,
-                                                                         self.actual_label: batch_y,
-                                                                         self.hold_prob: 0.5})
+                    (loss, _, batch_logits) = self.sess.run([self.cross_entropy, self.minimize,
+                                                             self.predicted_label],
+                                                            feed_dict={self.image_input: batch_x,
+                                                                       self.actual_label: batch_y,
+                                                                       self.hold_prob: 0.5})
+
                     batch_prediction = get_predictions_from_logits(batch_logits)
 
                     for (y, prediction) in zip(batch_y, batch_prediction):
@@ -241,6 +242,7 @@ class MNISTModel(object):
                         prediction_list.append(prediction)
 
                     loss_metric.add("loss", loss)
+
             except tf.errors.OutOfRangeError:
                 epoch_mse_metric.add("training_mse", calculate_mse(prediction_list, truth_list))
                 epoch_mae_metric.add("training_mae", calculate_mae(prediction_list, truth_list))
