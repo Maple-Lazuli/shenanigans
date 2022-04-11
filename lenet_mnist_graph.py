@@ -336,7 +336,7 @@ class MNISTModel(object):
         """
 
         softmax = tf.compat.v1.math.softmax(self.predicted_label, name="PredictionSoftmax")
-        return self.sess.run(softmax, feed_dict={self.input_image_batch: input_image_batch,
+        return self.sess.run(softmax, feed_dict={self.image_input: input_image_batch,
                                                  self.hold_prob: 1.0})
 
 
