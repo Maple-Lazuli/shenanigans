@@ -16,35 +16,55 @@ def get_parameters(file_name):
     return parameters
 
 
-def calculate_mse(scores):
+def calculate_mse(prediction, truth):
     """
-    Calculates mean squared error using the error from the training steps.
+    Calculates mean squared error using the error from the predictions and truths.
     Parameters
     ----------
-    scores: A list of errors
+    prediction: a list of predictions for each class such that the shape is (, 5)
+    truth: a list of truths for each class such that the shape is (, 5)
 
     Returns
     -------
-    MSE score from the list of errors
+    MSE score from the errors
     """
-    scores = np.array(scores)
 
-    return np.sum((50 - scores) * (50 - scores)) / len(scores)
+    error_sum = 0
+    n = 0
+    for (p, t) in zip(prediction, truth):
+        squared_error = (np.array(p) - np.array(t)) ** 2
+        error_sum += np.sum(squared_error)
+        n += len(p)
+
+    mean_squared_error = error_sum / n
+
+    # mse = np.mean(np.square(np.sum(np.array(prediction) - np.array(truth))))
+
+    return mean_squared_error
 
 
-def calculate_mae(scores):
+def calculate_mae(prediction, truth):
     """
-    Calculates mean absolute error using the error from the training steps.
+    Calculates mean absolute error using the error from the predictions and truths.
     Parameters
     ----------
-    scores: A list of errors
+    prediction: a list of predictions for each class such that the shape is (, 5)
+    truth: a list of truths for each class such that the shape is (, 5)
 
     Returns
     -------
-    MAE score from the list of errors
+    MAE score from the errors
     """
-    scores = np.array(scores)
-    return np.sum((50 - scores)) / len(scores)
+
+    absolute_error = 0
+    n = 0
+    for (p, t) in zip(prediction, truth):
+        absolute_error += np.sum(np.abs(np.array(p) - np.array(t)))
+        n += len(p)
+
+    mean_absolute_error = absolute_error / n
+
+    return mean_absolute_error
 
 
 def dataset_value_parser(key, value):
@@ -125,6 +145,16 @@ def parse_satsim_record(example_proto):
     return return_features
 
 
+def get_predictions_from_logits(batch_logits):
+    batch_prediction = list()
+    for logits in batch_logits:
+        element_prediction = np.zeros(len(logits))
+        element_prediction[np.argmax(logits)] = 1
+        batch_prediction.append(element_prediction)
+
+    return batch_prediction
+
+
 def init_weights(shape):
     init_random_dist = tf.random.truncated_normal(shape, stddev=0.1)
     return tf.compat.v1.Variable(init_random_dist)
@@ -202,44 +232,54 @@ class SatSimModel(object):
 
         for i in range(epochs):
             print(f"Started Training Epoch {i}  at {str(datetime.now())}")
+            prediction_list = list()
+            truth_list = list()
             try:
                 self.sess.run(self.train_iterator.initializer)
-                batch_match_list = []
+
                 while True:
                     features = self.sess.run(self.next_train)
                     batch_x = features['input']
                     batch_y = features['label']
-                    (loss, _, batch_accuracy) = self.sess.run([self.cross_entropy, self.minimize,
-                                                               self.batch_accuracy],
-                                                              feed_dict={self.input_image_batch: batch_x,
-                                                                         self.true_label: batch_y,
-                                                                         self.hold_prob: 0.5})
+                    (loss, _, batch_logits) = self.sess.run([self.cross_entropy, self.minimize,
+                                                             self.predicted_label],
+                                                            feed_dict={self.input_image_batch: batch_x,
+                                                                       self.true_label: batch_y,
+                                                                       self.hold_prob: 0.5})
+
+                    batch_prediction = get_predictions_from_logits(batch_logits)
+
+                    for (y, prediction) in zip(batch_y, batch_prediction):
+                        truth_list.append(y)
+                        prediction_list.append(prediction)
+
                     loss_metric.add("loss", loss)
-                    batch_match_list.append(batch_accuracy)
 
             except tf.errors.OutOfRangeError:
-                epoch_mse_metric.add("training_loss", calculate_mse(batch_match_list))
-                epoch_mae_metric.add("training_loss", calculate_mae(batch_match_list))
+                epoch_mse_metric.add("training_mse", calculate_mse(prediction_list, truth_list))
+                epoch_mae_metric.add("training_mae", calculate_mae(prediction_list, truth_list))
+
+                prediction_list = list()
+                truth_list = list()
                 try:
                     self.sess.run(self.valid_iterator.initializer)
-                    batch_match_list = []
                     while True:
                         features = self.sess.run(self.next_valid)
-                        test_x = features['input']
-                        test_y = features['label']
-                        # Find occurences where there are matches
-                        matches = tf.compat.v1.equal(tf.compat.v1.argmax(input=self.predicted_label, axis=1),
-                                                     tf.compat.v1.argmax(input=self.true_label, axis=1))
-                        # Find the number of correct predictions
-                        acc = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
-                        # add the number of correct predictions to the running sum
-                        score = self.sess.run(acc, feed_dict={self.input_image_batch: test_x,
-                                                              self.true_label: test_y,
-                                                              self.hold_prob: 1.0})
-                        batch_match_list.append(score)
+                        valid_x = features['input']
+                        valid_y = features['label']
+
+                        batch_logits = self.inference(valid_x)
+
+                        batch_prediction = get_predictions_from_logits(batch_logits)
+
+                        for (y, prediction) in zip(valid_y, batch_prediction):
+                            truth_list.append(y)
+                            prediction_list.append(prediction)
+
                 except tf.errors.OutOfRangeError:
-                    epoch_mse_metric.add("test_loss", calculate_mse(batch_match_list))
-                    epoch_mae_metric.add("test_loss", calculate_mae(batch_match_list))
+                    epoch_mse_metric.add("valid_mse", calculate_mse(prediction_list, truth_list))
+                    epoch_mae_metric.add("valid_mae", calculate_mae(prediction_list, truth_list))
+
         if save:
             saver.save(self.sess, save_location)
 
@@ -295,6 +335,22 @@ class SatSimModel(object):
                                          tf.compat.v1.argmax(input=self.true_label, axis=1))
             # find the number of correct predictions
             self.batch_accuracy = tf.compat.v1.reduce_sum(input_tensor=tf.compat.v1.cast(matches, tf.float32))
+
+    def inference(self, input_image_batch):
+        """
+        Returns a vector of logits
+
+        Parameters
+        ----------
+        input_image - a matrix of shape (x, 512,512)
+
+        Returns
+        -------
+        list
+        """
+        softmax = tf.compat.v1.math.softmax(self.predicted_label, name="PredictionSoftmax")
+        return self.sess.run(softmax, feed_dict={self.input_image_batch: input_image_batch,
+                                                 self.hold_prob: 1.0})
 
 
 def cli_main(flags):
