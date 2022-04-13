@@ -15,7 +15,7 @@ def calc_specificity(tn, fp):
 
 
 def calc_accuracy(tp, tn, fp, fn):
-    return (tp + tn) / (tp + tn + fp + fn)  if tp != 0 or tn !=0  else 0
+    return (tp + tn) / (tp + tn + fp + fn) if tp != 0 or tn != 0 else 0
 
 
 def calc_f1_score(tp, fp, fn):
@@ -74,6 +74,17 @@ def confusion_matrix_calculations(matrix):
 
 
 def create_measure_matrix(confusion_matrix):
+    """
+    Creates a pandas dataframe of the scores from a confusion matrix
+
+    Parameters
+    ----------
+    confusion_matrix
+
+    Returns
+    -------
+
+    """
     scores = []
     for row in range(0, confusion_matrix.shape[0]):
         scores.append(confusion_matrix_calculations_for_label(row, row, confusion_matrix))
@@ -81,6 +92,7 @@ def create_measure_matrix(confusion_matrix):
     score_matrix = pd.DataFrame.from_dict(scores)
 
     return score_matrix
+
 
 def confusion_matrix_calculations_for_label(prediction_idx, true_idx, matrix):
     # find the true positive
@@ -125,7 +137,20 @@ def confusion_matrix_calculations_for_label(prediction_idx, true_idx, matrix):
 
     return label_calculation_dict
 
+
 def expand_lists(x_list, y_list):
+    """
+    Doubles the size of the two lists for the line plot in the ROC Curves
+
+    Parameters
+    ----------
+    x_list: Values along the horizontal axis
+    y_list: Values along the vertical axis
+
+    Returns
+    -------
+    Returns a doubled up version of both lists.
+    """
     x_expanded = [x_list[0]]
     y_expanded = []
 
@@ -180,6 +205,7 @@ def create_ovr_roc_dict(classifications, num_labels, resolution=100):
             for classification in classifications:
 
                 # determine if the label is the true classification of the image
+                # Note: the label is appended to the end of each classification
                 if label == int(classification[-1]):
                     label_parity = True
                 else:
@@ -188,7 +214,8 @@ def create_ovr_roc_dict(classifications, num_labels, resolution=100):
                 # retrieve the probability of the label
                 probability_of_label = classification[label]
 
-                if probability_of_label >= threshold:
+                # if (probability_of_label >= threshold) and (probability_of_label > 1 - probability_of_label): # is this the proper way to do this part?
+                if (probability_of_label >= threshold) and (probability_of_label > 1 - probability_of_label):
                     classifier_parity = True
                 else:
                     classifier_parity = False
@@ -219,7 +246,6 @@ def create_ovr_roc_dict(classifications, num_labels, resolution=100):
 
 
 def create_confusion_matrix(classifications, labels):
-
     # create confusion matrix
     num_labels = len(labels)
     confusion_matrix = np.zeros((num_labels, num_labels), dtype=np.int)
@@ -234,5 +260,3 @@ def create_confusion_matrix(classifications, labels):
         confusion_matrix.iloc[predicted_class, true_class] += 1
 
     return confusion_matrix
-
-
