@@ -1,0 +1,9 @@
+FROM tensorflow/tensorflow:2.8.0-gpu
+
+RUN pip install --upgrade pip
+
+RUN pip install -r requirements
+
+COPY . /opt/app/
+
+CMD /bin/bash
