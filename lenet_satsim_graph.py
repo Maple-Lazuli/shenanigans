@@ -354,27 +354,31 @@ class SatSimModel(object):
 
 
 def cli_main(flags):
-    config_dict = get_parameters(flags.config_json)
-
-    train_records = config_dict['train_set_location']
-    validation_records = config_dict['validation_set_location']
+    train_records = flags.train_set_location
+    validation_records = flags.validation_set_location
 
     train_df = DatasetGenerator(train_records, parse_function=parse_satsim_record, shuffle=True,
-                                batch_size=config_dict['train_batchsize'])
+                                batch_size=flags.train_batchsize)
     validation_df = DatasetGenerator(validation_records, parse_function=parse_satsim_record, shuffle=True,
-                                     batch_size=config_dict['validate_batchsize'])
+                                     batch_size=flags.validate_batchsize)
 
     reporter = Report()
     reporter.set_train_set(train_df)
     reporter.set_validation_set(validation_df)
     reporter.set_write_directory(flags.report_dir)
-    reporter.set_ignore_list(config_dict['ignore_list'])
-
+    reporter.set_ignore_list([
+        "input",
+        "depth",
+        "width",
+        "height",
+        "field_of_view_x",
+        "field_of_view_y"
+    ])
     with tf.compat.v1.Session() as sess:
         model = SatSimModel(sess, train_df, validation_df, learning_rate=flags.learning_rate, reporter=reporter)
-        model.train(epochs=flags.epochs, save=flags.save, save_location=config_dict['model_save_dir'])
+        model.train(epochs=flags.epochs, save=flags.save, save_location=flags.model_save_dir)
 
-    reporter.write_report(f"{config_dict['report_name_base']}_train_{str(datetime.now())}")
+    reporter.write_report(f"{flags.report_name_base}_train_{str(datetime.now())}")
 
 
 if __name__ == "__main__":
@@ -384,13 +388,33 @@ if __name__ == "__main__":
                         default=1,
                         help='The number of epochs for training')
 
-    parser.add_argument('--learning_rate', type=int,
+    parser.add_argument('--learning_rate', type=float,
                         default=0.001,
                         help='The learning rate to use during training')
 
-    parser.add_argument('--config_json', type=str,
-                        default='./satsim_config.json',
-                        help="The config json file containing the parameters for the model")
+    parser.add_argument('--train_set_location', type=str,
+                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df/train/satsim_train.tfrecords",
+                        help='The location of the training set')
+
+    parser.add_argument('--validation_set_location', type=str,
+                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df/valid/satsim_valid.tfrecords",
+                        help='The location of the validation set')
+
+    parser.add_argument('--train_batchsize', type=int,
+                        default=50,
+                        help='The batch size to use for feeding training examples')
+
+    parser.add_argument('--validate_batchsize', type=int,
+                        default=50,
+                        help='The batch size to use for feeding validation examples')
+
+    parser.add_argument('--model_save_dir', type=str,
+                        default="/media/ada/Internal Expansion/shenanigans_storage/lenet_satsim_model/satsim",
+                        help='The directory to save the model in.')
+
+    parser.add_argument('--report_name_base', type=str,
+                        default="lenet-satsim",
+                        help='The base name for the report')
 
     parser.add_argument('--save', type=bool,
                         default=True,
