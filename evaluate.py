@@ -99,11 +99,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--graph_location', type=str,
-                        default='/media/ada/Internal Expansion/shenanigans_storage/lenet_satsim_model/satsim.meta',
+                        default='./model/satsim.meta',
                         help='The location of the meta graph')
 
     parser.add_argument('--checkpoint_dir', type=str,
-                        default='/media/ada/Internal Expansion/shenanigans_storage/lenet_satsim_model',
+                        default='./model',
                         help='The location of the model checkpoint')
 
     parser.add_argument('--input_tensor_name', type=str,
@@ -119,7 +119,7 @@ if __name__ == '__main__':
                         help='The tensor with the hold probabilites')
 
     parser.add_argument('--validation_set_location', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df/valid/satsim_valid.tfrecords",
+                        default="./tf_records/valid/satsim_valid.tfrecords",
                         help='the location of the validation examples to use for evaluation')
 
     parser.add_argument('--batch_size', type=int,

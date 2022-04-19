@@ -393,11 +393,11 @@ if __name__ == "__main__":
                         help='The learning rate to use during training')
 
     parser.add_argument('--train_set_location', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df/train/satsim_train.tfrecords",
+                        default="./tf_records/train/satsim_train.tfrecords",
                         help='The location of the training set')
 
     parser.add_argument('--validation_set_location', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df/valid/satsim_valid.tfrecords",
+                        default="./tf_records/valid/satsim_valid.tfrecords",
                         help='The location of the validation set')
 
     parser.add_argument('--train_batchsize', type=int,
@@ -409,7 +409,7 @@ if __name__ == "__main__":
                         help='The batch size to use for feeding validation examples')
 
     parser.add_argument('--model_save_dir', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/lenet_satsim_model/satsim",
+                        default="./model/satsim",
                         help='The directory to save the model in.')
 
     parser.add_argument('--report_name_base', type=str,

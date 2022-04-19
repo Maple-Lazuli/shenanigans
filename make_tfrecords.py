@@ -106,12 +106,12 @@ if __name__ == '__main__':
                         help="The name of the meta graph")
 
     parser.add_argument('--source_data_dir', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data",
+                        default="./raw_data",
                         # if size < 0, parameter is ignored
                         help="The directory containing the unprocessed examples")
 
     parser.add_argument('--tf_record_output_dir', type=str,
-                        default="/media/ada/Internal Expansion/shenanigans_storage/generated_data_df",
+                        default="./tf_records",
                         help="The directory to store the tf records in")
 
     parser.add_argument('--split_size_train', type=float,
