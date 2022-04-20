@@ -71,6 +71,10 @@ def create_tfrecords(data_dir,
 
 
 def main_cli(flags):
+
+    if len(flags.gpus) > 0:
+        os.environ['CUDA_VISIBLE_DEVICES'] = flags.gpus
+
     if flags.graph_name == "satsim":
         partition_fn = sim.partition_examples
         build_tf_dataset = sim.build_tf_dataset
@@ -121,6 +125,10 @@ if __name__ == '__main__':
     parser.add_argument('--split_size_test', type=float,
                         default=-0.1,  # if size < 0, parameter is ignored
                         help="The portion of the source data to make test examples")
+
+    parser.add_argument('--gpus', type=str,
+                        default="",
+                        help='Sets the GPU to use')
 
     parser.add_argument('--split_size_valid', type=float,
                         default=-0.2,  # if size < 0, parameter is ignored

@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 import numpy as np
 import evaluation_utils as eu
@@ -24,6 +26,10 @@ def labels_from_classifications(classifications):
 
 
 def cli_main(flags):
+
+    if len(flags.gpus) > 0:
+        os.environ['CUDA_VISIBLE_DEVICES'] = flags.gpus
+
     reporter = Report()
     sess = tf.compat.v1.Session()
     # read in the configuration json
@@ -126,10 +132,13 @@ if __name__ == '__main__':
                         default=50,
                         help='The batch size to use for feeding validation examples')
 
-
     parser.add_argument('--report_name_base', type=str,
                         default="lenet_satsim",
                         help='the base name for the reports.')
+
+    parser.add_argument('--gpus', type=str,
+                        default="",
+                        help='Sets the GPU to use')
 
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',

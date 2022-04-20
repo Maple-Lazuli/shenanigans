@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 import numpy as np
 import argparse
@@ -354,6 +356,10 @@ class SatSimModel(object):
 
 
 def cli_main(flags):
+
+    if len(flags.gpus) > 0:
+        os.environ['CUDA_VISIBLE_DEVICES'] = flags.gpus
+
     train_records = flags.train_set_location
     validation_records = flags.validation_set_location
 
@@ -401,11 +407,11 @@ if __name__ == "__main__":
                         help='The location of the validation set')
 
     parser.add_argument('--train_batchsize', type=int,
-                        default=50,
+                        default=20,
                         help='The batch size to use for feeding training examples')
 
     parser.add_argument('--validate_batchsize', type=int,
-                        default=50,
+                        default=20,
                         help='The batch size to use for feeding validation examples')
 
     parser.add_argument('--model_save_dir', type=str,
@@ -423,6 +429,10 @@ if __name__ == "__main__":
     parser.add_argument('--report', type=bool,
                         default=True,
                         help='Whether to create a report.')
+
+    parser.add_argument('--gpus', type=str,
+                        default="",
+                        help='Sets the GPU to use')
 
     parser.add_argument('--report_dir', type=str,
                         default='./reports/',
