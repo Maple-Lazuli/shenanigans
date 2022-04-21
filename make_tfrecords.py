@@ -66,7 +66,7 @@ def create_tfrecords(data_dir,
             else:
                 for example in split_examples:
                     tf_example = tf_example_builder_fn(example)
-                    # only write if the tf_example_builder_fn does not return a none value
+
                     writer.write(tf_example.SerializeToString()) if tf_example is not None else None
 
 

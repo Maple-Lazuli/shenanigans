@@ -4,6 +4,7 @@ import os
 import json
 import random
 import astropy.io.fits
+from PIL import Image
 
 
 def map_label_to_name(label):
@@ -89,6 +90,12 @@ def build_tf_example(example):
     except:
         print("error parsing fits")
         return None
+
+    if (height != 512) or (width != 512):
+        #resize the image to be 512, 512 if it is not already
+        im = Image.fromarray(image_raw)
+        im = im.resize((512, 512))
+        image_raw = np.array(im)
 
     features = {
         "height": _int64_feature(height),
